@@ -1,0 +1,16 @@
+---
+  bga_data:
+    gameids:
+      Carcassonne: 1
+      Downforce: 1195
+      Kingdom_builder: 1225
+      Draftosaurus: 1310
+      Bang: 1320
+      Arnak: 1382
+      Azul: 1467
+    urls:
+      main: https://www.boardgamearena.com
+      login: https://www.boardgamearena.com/account
+      community: https://www.boardgamearena.com/community
+      gamestats: https://www.boardgamearena.com/gamestats?player={p1}&game_id={p2}
+      gamestatsfull: https://www.boardgamearena.com/gamestats?player={p1}&game_id={p2}&opponent_id={p3}&end_date={p4}&finished=1

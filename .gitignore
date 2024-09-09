@@ -1,0 +1,8 @@
+## Ignoring private config file
+conf_priv.yml
+
+## Ignoring result files
+*.elo
+
+## Others
+notes/
