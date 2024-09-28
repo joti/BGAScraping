@@ -2,6 +2,7 @@
 conf_priv.yml
 
 ## Ignoring result files
+results/
 *.elo
 
 ## Others

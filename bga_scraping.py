@@ -4,6 +4,7 @@
 import time
 import sys
 import yaml
+import os.path
 
 from datetime import datetime, timedelta
 from selenium import webdriver
@@ -143,6 +144,14 @@ def elo_hist( game_def,     # id or name of the game,
 
     if file_name == ".":
         file_name = (player_name + "__" + game_name).lower().replace(" ", "_") + ".elo"
+    if file_name != "" and output_path != "" :
+        if os.path.isdir(output_path):
+            file_name = output_path + file_name
+        else :
+            print(output_path + " does not exist")
+    if file_name != "" :
+        print("Output file: " + file_name)
+    print()
 
     close_popup()
 
@@ -266,7 +275,6 @@ def elo_hist( game_def,     # id or name of the game,
 
             wait.until(EC.visibility_of_element_located((By.XPATH, "//table[@id='gamelist_inner']")))
             rownum=len(driver.find_elements(by=By.XPATH, value="//table[@id='gamelist_inner']/tr"))
-            #print("No. of games: "+str(rownum))
 
             if prev_rownum == rownum:
                 trycount += 1
@@ -281,6 +289,7 @@ def elo_hist( game_def,     # id or name of the game,
                 needSearch = True
                 break
         
+        rownum=len(driver.find_elements(by=By.XPATH, value="//table[@id='gamelist_inner']/tr"))
         print(str(rownum) + " games found")
         millisec2 = int(time.time() * 1000)
         gameStatsLoadTotalTime += (millisec2 - millisec1)
@@ -454,7 +463,6 @@ def elo_hist( game_def,     # id or name of the game,
         print("lastTst  = " + str(tableObj.endTst))
         if tableObj.endTst - firstTst > 1 :
             avgELO = avgSum / (tableObj.endTst - firstTst)
-            print("Average ELO: " + str(avgELO))
 
 
     file_opened = False
@@ -479,10 +487,14 @@ def elo_hist( game_def,     # id or name of the game,
         print("Number of ranked games: " + str(rankedNum))
         print("Personal ELO record of " + player_name + ":")
     print(maxELODate + ": " + str(maxELO))
+    if "avg" in subfunc_set :
+        print("Average ELO: " + str('{0:.2f}'.format(avgELO)))
 
     if file_opened :
         f.write("Number of ranked games: " + str(rankedNum) + "\n")
-        f.write("Highest ELO: " + str(maxELO) + "\n")
+        if "avg" in subfunc_set :
+            f.write("Average ELO: " + str('{0:.2f}'.format(avgELO)) + "\n")
+        f.write("Highest ELO: " + str(maxELO) + " (" + maxELODate + ")\n")
         f.write("\n")
 
     print()
@@ -517,6 +529,7 @@ with open(PRIVCONFIG_FILE, 'r') as f:
     config = yaml.safe_load(f)
     bga_login = config['bga_login']
     chrome = config['chrome']
+    output_path = config['output_path']
 
 PUBCONFIG_FILE = r'conf_pub.yml'
 with open(PUBCONFIG_FILE, 'r') as f:
