@@ -182,7 +182,7 @@ def elo_hist( game_def,     # id or name of the game,
             wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="elo_game_' + game_id + '"]')))
         except TimeoutException:
             print("Player %s has not played the game %s yet." % (player_name, game_name))
-            exit_program()
+            continue
 
         player_url = driver.current_url
         print("The current url is: " + str(player_url))
