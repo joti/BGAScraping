@@ -1,13 +1,29 @@
 ---
   bga_data:
     gameids:
-      Carcassonne: 1
-      Downforce: 1195
-      Kingdom_builder: 1225
-      Draftosaurus: 1310
-      Bang: 1320
-      Arnak: 1382
+      Ark Nova: 1741
       Azul: 1467
+      Bang: 1320
+      Butterfly: 1218
+      Cant Stop: 11
+      Carcassonne: 1
+      Catan: 1539
+      Copenhagen: 1548
+      CuBirds: 1210
+      Downforce: 1195
+      Draftosaurus: 1310
+      Kingdomino: 1148
+      Kingdom Builder: 1225
+      LLAMA: 1405
+      Lost Ruins of Arnak: 1382
+      Luxor: 1257
+      Marrakech: 1187
+      Saboteur: 24
+      Solo: 1119
+      Stone Age: 13
+      Ticket to Ride: 1542
+      Ticket to Ride Europe: 1900
+      Wingspan: 1635
     urls:
       main: https://www.boardgamearena.com
       login: https://www.boardgamearena.com/account

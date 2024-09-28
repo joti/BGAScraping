@@ -1,0 +1,7 @@
+---
+  chrome:
+    chrome_path: C:\...\chrome.exe
+    chromedriver_path: C:\...\chromedriver.exe
+  bga_login:
+    user: your_username
+    password: your_password

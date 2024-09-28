@@ -21,18 +21,31 @@ from selenium.common.exceptions import TimeoutException
 # game = the type of board game
 # table = one particular match of a given game
 class tableClass :
-    def __init__(self,seq,tableId,endDate,newELO,unranked,newRecord,newRecByDay):
-        self.seq=seq
-        self.tableId=tableId
-        self.endDate=endDate
-        self.newELO=newELO
-        self.unranked=unranked
+    def __init__(self,seq,tableId,endDate,endTst,newELO,unranked,newRecord,newRecByDay,fake):
+        self.seq = seq
+        self.tableId = tableId
+        self.endDate = endDate
+        self.endTst = endTst
+        self.newELO = newELO
+        self.unranked = unranked
         self.newRecord = newRecord
         self.newRecByDay = newRecByDay
+        self.fake = fake
 
 def exit_program():
     print("Exiting...")
     sys.exit(0)
+
+def close_popup():
+    # We open the main page just to dismiss popups if there's any
+    mainpage_link = bga_data['urls']['main']
+    driver.get(mainpage_link)
+    try:
+        popup = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'cc-window')]//a[contains(@class, 'cc-btn')]")))
+        popup.click()
+        print("Popup closed")
+    except TimeoutException:
+        print("No clickable popup found")    
 
 def login():
 
@@ -54,41 +67,87 @@ def login():
     wait.until(EC.visibility_of_element_located((By.ID, "submit_login_button")))
     driver.find_element(By.ID, "submit_login_button").click()
 
-def elo_hist():
+def elo_hist( game_def,     # id or name of the game,
+              player_name,  # the player's BGA name
+              min_date,     # start of the period to check (no limit if empty)
+              max_date,     # end of the period to check (no limit if empty)
+              file_name,    # name of file to export data
+              subfunc_set   # subfunctions to execute
+            ):
 
     ROW_LIMIT = 200
 
-    #2nd param : id or name of the game
-    #3rd param : player name
-    #4th param : name of file to export data
+    maxDateStr = ""
+    minDateStr = ""
+    maxDateDT = datetime.max
+    minDateDT = datetime.min
+    
+    maxTst = None
+    minTst = None
+
+    if max_date != "":
+        maxDateStr = max_date.replace("-", ".")
+        try:
+            maxDateDT = datetime.strptime(maxDateStr, '%Y.%m.%d')
+        except ValueError as e:
+            print("End of period is not a proper date value (YYYY-MM-DD)")
+            exit_program()
+        #time.mktime(maxDateTime.timetuple())
+    else :
+        if "avg" in subfunc_set :
+            maxDateStr = datetime.today().strftime('%Y.%m.%d')
+    if maxDateStr != "" :
+        maxTstDT = datetime(int(maxDateStr[0:4]), int(maxDateStr[5:7]), int(maxDateStr[8:10]), 12, 0)
+        maxTst = datetime.timestamp(maxTstDT)
+
+    print("maxDate = " + maxDateStr + "    maxTst = " + str(maxTst))        
+
+    if min_date != "":
+        minDateStr = min_date.replace("-", ".")
+        try:
+            minDateDT = datetime.strptime(minDateStr, '%Y.%m.%d')
+        except ValueError as e:
+            print("Start of period is not a proper date value (YYYY-MM-DD)")
+            exit_program()
+            
+        minTstDT = datetime(int(minDateStr[0:4]), int(minDateStr[5:7]), int(minDateStr[8:10]), 0, 0)
+        minTst = datetime.timestamp(minTstDT)
+        #time.mktime(minDateTime.timetuple())
+
+    print("minDate = " + minDateStr + "    minTst = " + str(minTst))        
+
     game_name = 'unknown'
     game_id = '0'
-    if argnum > 2 :
-        gamearg = sys.argv[2]
-
+    if game_def != "" :
         for k, v in bga_data['gameids'].items():
-            if gamearg.upper() == k.upper() or gamearg == str(v) :
+            if game_def.upper().replace(" ", "").replace("_", "") == k.upper().replace(" ", "").replace("_", "") or game_def == str(v) :
                 game_id = str(v)
                 game_name = k
     else :
         game_id = '1'
         game_name = 'Carcassonne'
+
+    if game_id == '0' :
+        print("Unknown game")
+        exit_program()
+        
     print(game_id + " - " + game_name)
         
-    if argnum > 3 :
-        player_name = sys.argv[3]
-    else :
+    if player_name == "" :
         player_name = bga_login['user']
     print('ELO progress of %s in the game %s:' % (player_name, game_name))
+    if minDateDT != datetime.min :
+        print('Start date: %s' % (minDateStr))
+    if maxDateDT != datetime.max :
+        print('End date: %s' % (maxDateStr))
 
-    if argnum > 4 :
-        file_name = sys.argv[4]
-        if file_name == "-":
-            file_name = (player_name + "__" + game_name).lower().replace(" ", "_") + ".elo"
-    else :
-        file_name = ""
+    if file_name == ".":
+        file_name = (player_name + "__" + game_name).lower().replace(" ", "_") + ".elo"
+
+    close_popup()
 
     # we need the player's id in BGA
+    # to get the community page we need to log in
     login()
     time.sleep(1)
 
@@ -110,24 +169,26 @@ def elo_hist():
         exit_program()
 
     player_url = driver.current_url
-    print("The current url is: "+str(player_url))
+    print("The current url is: " + str(player_url))
 
     player_id = player_url[(player_url.find('='))+1:]
-    print("Player id is: "+player_id)    
+    print("Player id is: " + player_id)    
 
-    # game history of the player can be found here:
-    # https://boardgamearena.com/gamestats?player=88033752&game_id=1
-    # with further parameters (filtering by opponent and end date)
-    # https://boardgamearena.com/gamestats?player=85374022&opponent_id=0&game_id=1&end_date=1719784800&finished=1
+    startDT = datetime.now()
 
-    current_date = datetime.now() + timedelta(days=1)
+    if maxDateDT != datetime.max :
+        current_date = maxDateDT + timedelta(days=1)
+    else :   
+        current_date = startDT + timedelta(days=1)
 
     needSearch = True
     tableSeq = 0
+    tableNum = 0
     tableIdSet = {}
     tableList = []
     gameStatsLoadTotalTime = 0
     gameStatsProcTotalTime = 0
+    endTst = None
     
     while needSearch :
         # convert date to lixux timestamp
@@ -192,12 +253,12 @@ def elo_hist():
                     trycount = 0
             except ElementClickInterceptedException:
                 print("ElementClickInterceptedException. Trycount=" + str(trycount))
-                trycause = "Click"
                 trycount += 1
-                if trycount == 4:
+                if trycount == 4 and trycause == "Click":
                     print("Cannot click 'More tables' button.")
                     exit_program()            
 
+                trycause = "Click"
                 time.sleep(trycount * 0.2)
                 continue
 
@@ -241,7 +302,7 @@ def elo_hist():
 
             # unfortunately it takes 15-20 ms to find an element...
 
-            # az 1. oszlopban a 2. 'a' tartalmazza a sorszámot
+            # 1st column, 2nd 'a': table id (class: bga_link)
             #tableId = gamerow.find_element(by=By.XPATH, value =".//td[1]/a[2]").text.lstrip('#')
             tableId = gamerow.find_element(by=By.CLASS_NAME, value ="bga-link").text.lstrip('#')
             tableIdSet.add(tableId)
@@ -252,10 +313,10 @@ def elo_hist():
 
             skipTable = False
             
-            # a 2. oszlopban az 1. div tartalmazza az időbélyeget
+            # 2nd column, 1st div: end time
             gameEnd = gamerow.find_element(by=By.XPATH, value =".//td[2]/div[1]").text
 
-            # a 4. oszlopban a 2.divben az 1. divben a 2. span tartalmazza az új ÉLŐ pontot (class: gamerank_value)
+            # 4th column, 2nd div, 1st div, 2nd span: nem ELO value (class: gamerank_value)
             try:
                 #newELOStr = gamerow.find_element(by=By.XPATH, value=".//td[4]/div[2]/div[1]/span[@class='gamerank_value ']").text
                 newELOStr = gamerow.find_element(by=By.CLASS_NAME, value="gamerank_value ").text
@@ -266,7 +327,24 @@ def elo_hist():
             else:
                 newELO = int(newELOStr)
 
+            # examples of game end values:
+            # 2024-09-24 at 22:51           2024.09.24 22:51
+            # yesterday at 14:51            tegnap 14:51-kor
+            # today at 13:00                ma 13:00-kor
+            # 2 hours ago                   2 órája
+            # one hour ago                  egy órával ezelőtt
+            # 41 minutes ago                41 perce
             endDate = gameEnd.split()[0]
+            endDate = endDate.replace("-", ".")
+
+            if "avg" in subfunc_set :
+                timePos = gameEnd.find(':')
+                if timePos == -1 :
+                    # For today, we consider all games as having finished at noon
+                    endTime = "12:00"
+                else :
+                    timePos -= 2
+                    endTime = gameEnd[timePos:timePos+5]
             
             match endDate :
                 case "tegnap" | "yesterday":
@@ -275,14 +353,23 @@ def elo_hist():
                     if len(endDate) < 3 or endDate[0].isalpha() :
                         # "20 minutes ago" / "today"
                         endDate = datetime.today().strftime('%Y.%m.%d')
+
+            #print(endDate + " " + endTime)                
+
+            if "avg" in subfunc_set :
+                endDateTime = datetime(int(endDate[0:4]), int(endDate[5:7]), int(endDate[8:10]), int(endTime[0:2]), int(endTime[3:5]))
+                endTst = datetime.timestamp(endDateTime)
+                #print(str(endDateTime) + " -> " + str(int(endTst)))
             
             endDateDT = datetime.strptime(endDate, '%Y.%m.%d')
             if endDateDT < current_date :
                 current_date = endDateDT
-                #print(tableId + ": " + endDate + " (new)")
             else :
-                #print(tableId + ": " + endDate)
                 pass
+
+            if endDateDT > maxDateDT:
+                print(tableId + " skipped (out of period)")
+                continue
             
             if newELO == 0:
                 unranked = True
@@ -290,11 +377,28 @@ def elo_hist():
             else:
                 unranked = False
 
+            # if this is the first game in the table then we add an extra item to help the calculation of the average ELO rating
+            if len(tableList) == 0 and "avg" in subfunc_set:
+                tableSeq += 1
+                tableObj = tableClass(1000000 - tableSeq, tableId + "0", maxDateStr, maxTst, newELO, False, False, False, True)
+                tableList.append(tableObj)
+
+            if endDateDT < minDateDT:
+                tableSeq += 1
+                tableObj = tableClass(1000000 - tableSeq, "1", minDateStr, minTst, newELO, False, False, False, True)
+                tableList.append(tableObj)
+                needSearch = False
+                
+                print(tableId + " and older games skipped (out of period)")
+                break
+
             tableSeq += 1
-            tableObj = tableClass(1000000 - tableSeq, tableId, endDate, newELO, unranked, False, False)
+            tableNum += 1
+            tableObj = tableClass(1000000 - tableSeq, tableId, endDate, endTst, newELO, unranked, False, False, False)
             tableList.append(tableObj)
 
-        print(str(tableSeq) + " games total")
+
+        print(str(tableNum) + " games total")
         millisec2 = int(time.time() * 1000)
         gameStatsProcTotalTime += (millisec2 - millisec1)
 
@@ -305,6 +409,7 @@ def elo_hist():
     dayRecSeq = 0
     dayRecSeqs = set()
     prevDate = ""
+    rankedNum = 0
 
     for tableObj in tableList:
         if tableObj.endDate != prevDate :
@@ -313,7 +418,10 @@ def elo_hist():
                 dayRecSeq = 0
 
         if not tableObj.unranked :
-            #print(str(tableObj.newELO) + ": " + tableObj.endDate)
+            if not tableObj.fake :
+                rankedNum += 1
+                
+            #print(str(tableObj.newELO) + ": " + tableObj.endDate + ", " + str(tableObj.endTst) + ", " + str(tableObj.fake))
             if tableObj.newELO > maxELO :
                 tableObj.newRecord = True
                 maxELO = tableObj.newELO
@@ -328,23 +436,69 @@ def elo_hist():
         if tableObj.seq in dayRecSeqs:
             tableObj.newRecByDay = True
 
-    print()
-    print("Personal ELO record of " + player_name + ":")
-    print(maxELODate + ": " + str(maxELO))
+    if "avg" in subfunc_set :
+        firstObj = True
+        avgSum = 0
+        prevELO = 0
+        for tableObj in tableList:
+            if not tableObj.unranked :
+                if firstObj :
+                    firstObj = False
+                    firstTst = tableObj.endTst
+                else :
+                    avgSum += prevELO * ( tableObj.endTst - prevTst )
+                prevTst = tableObj.endTst
+                prevELO = tableObj.newELO
+        print("avgSum   = " + str(avgSum))
+        print("firstTst = " + str(firstTst))
+        print("lastTst  = " + str(tableObj.endTst))
+        if tableObj.endTst - firstTst > 1 :
+            avgELO = avgSum / (tableObj.endTst - firstTst)
+            print("Average ELO: " + str(avgELO))
 
-    print()
-    print("Days when " + player_name + " reached new personal ELO record:")
 
     file_opened = False
     if file_name != "":
         f = open(file_name, "w")
         file_opened = True
+
+        f.write("Player: " + player_name + "\n")
+        f.write("Game: " + game_name + "\n")
+        if minDateDT != datetime.min :
+            f.write("Start date of examination: " + minDateStr + "\n")
+        if maxDateDT != datetime.max :
+            f.write("End date of examination: " + maxDateStr + "\n")
+        f.write("Examination started at " + startDT.strftime("%Y.%m.%d %H:%M:%S") + "\n")
+        f.write("\n")
+
+    print()
+    if maxDateDT != datetime.max or minDateDT != datetime.min :
+        print("Number of ranked games within the period: " + str(rankedNum))
+        print("Personal ELO record of " + player_name + " within the period:")
+    else :    
+        print("Number of ranked games: " + str(rankedNum))
+        print("Personal ELO record of " + player_name + ":")
+    print(maxELODate + ": " + str(maxELO))
+
+    if file_opened :
+        f.write("Number of ranked games: " + str(rankedNum) + "\n")
+        f.write("Highest ELO: " + str(maxELO) + "\n")
+        f.write("\n")
+
+    print()
+    print("Days when " + player_name + " reached new personal ELO record:")
+
+    if file_opened :
+        f.write("ELO progress:\n")
+        f.write("\n")
     
     for tableObj in tableList:
         if tableObj.newRecByDay :
-            print(tableObj.endDate + ": " + str(tableObj.newELO))
+            endMark = " *" if tableObj.fake else ""
+                
+            print(tableObj.endDate + ": " + str(tableObj.newELO) + endMark)
             if file_opened:
-                f.write(tableObj.endDate + ": " + str(tableObj.newELO) + "\n")
+                f.write(tableObj.endDate + ": " + str(tableObj.newELO) + endMark + "\n")
 
     if file_opened:
         f.close()        
@@ -387,9 +541,37 @@ if argnum > 1 :
 else :
     func = 'elo_hist'
 
+game_def = ""
+player_name = ""
+file_name = ""
+min_date = ""
+max_date = ""
+subfunc_set = set()
+
+if argnum > 2 :
+    for argpos in range(2, argnum):
+        if argpos == argnum - 1 and sys.argv[argpos][:2] != '--':
+            break
+            
+        match sys.argv[argpos]:
+            case "-g":
+                game_def = sys.argv[argpos + 1]
+            case "-p":
+                player_name = sys.argv[argpos + 1]
+            case "-f":
+                file_name = sys.argv[argpos + 1]
+            case "-mn":
+                min_date = sys.argv[argpos + 1]
+            case "-mx":
+                max_date = sys.argv[argpos + 1]
+            case "--avg":
+                subfunc_set.add("avg")
+
+print("game: " + game_def + ", player: " + player_name + ", file: " + file_name)            
+
 match func :
     case "elo_hist":
-        elo_hist()
+        elo_hist(game_def, player_name, min_date, max_date, file_name, subfunc_set)
     case "login":    
         login()
     case _:

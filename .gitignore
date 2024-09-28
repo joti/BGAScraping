@@ -6,3 +6,5 @@ conf_priv.yml
 
 ## Others
 notes/
+temp/
+*.bak
