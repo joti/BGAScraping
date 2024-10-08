@@ -159,6 +159,8 @@ def elo_hist( game_def,     # id or name of the game,
             player_file = (player_name + "__" + game_name).lower().replace(" ", "_") + ".elo"
         elif file_name != "":
             player_file = file_name
+        else :
+            player_file = ""
             
         if player_file != "" and output_path != "" :
             if os.path.isdir(output_path):
