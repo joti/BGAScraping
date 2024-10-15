@@ -1,7 +1,7 @@
 # BGA Scraping
 
 This python script provides methods to collect data from the website "Board Game Arena" by web scraping.<br/>
-Currently it can be used to analyze ELO ranking progression of players.
+Currently it can be used to analyze ELO rating progression of players.
 
 ## Prerequisites
 
@@ -26,7 +26,7 @@ Call the available functions as described below.
 
 ### elo_hist
 
-The script runs through the game history of the given players for a specified game, checks the ELO ranking after each game, and collects the dates when the players broke their personal best. 
+The script runs through the game history of the given players for a specified game, checks the ELO rating after each game, and collects the dates when the players broke their personal best. 
 The script can also calculate the average ELO rating of one or more players within a given period.
 The result can also be saved to a file.
 
