@@ -6,8 +6,9 @@ Currently it can be used to analyze ELO rating progression of players.
 ## Prerequisites
 
 Install the Selenium package for python.
-To do web scraping, you need to download a webdriver. If you use Chrome, you need to download the compatible browser that matches the webdriver.
-Rename conf_priv_example.yml to conf_priv.yml and specify the path where your Chrome and your Chromedriver is located. 
+To do web scraping, you need to download a webdriver. If you use Chrome, and you have a minimum Selenium version of 4.11.2., Selenium gets the correct Chromedriver for you at runtime.
+Install 'Chrome for Testing' to avoid problems with automatic updates of the browser.
+Rename conf_priv_example.yml to conf_priv.yml and specify the path where your 'Chrome for Testing' is located. 
 In conf_priv.yml you also need to set your BGA username and password so that the script can access the data on BGA.
 You can set the default output directory here as well.
 

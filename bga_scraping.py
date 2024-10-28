@@ -546,9 +546,8 @@ with open(PUBCONFIG_FILE, 'r') as f:
     bga_data = config['bga_data']
 
 chrome_path = chrome['chrome_path']
-chromedriver_path = chrome['chromedriver_path']
 
-service = Service(executable_path=chromedriver_path)
+service = Service()
 options = webdriver.ChromeOptions()
 options.binary_location = chrome_path
 options.add_argument("--log-level=1")
