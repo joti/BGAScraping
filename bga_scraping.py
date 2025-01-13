@@ -48,15 +48,15 @@ def close_popup():
     except TimeoutException:
         print("No clickable popup found")    
 
-def login():
-
+def login24():
+    # Deprecated login method
     login_link = bga_data['urls']['login']
     print(login_link);
     driver.get(login_link)
 
     username = bga_login['user']
     pw = bga_login['password']
-        
+
     wait.until(EC.visibility_of_element_located((By.ID, "username_input")))
     it_username = driver.find_element(By.ID, "username_input")
     it_username.send_keys(username)
@@ -67,6 +67,41 @@ def login():
 
     wait.until(EC.visibility_of_element_located((By.ID, "submit_login_button")))
     driver.find_element(By.ID, "submit_login_button").click()
+
+def login():
+
+    login_link = bga_data['urls']['login']
+    print(login_link);
+    driver.get(login_link)
+
+    username = bga_login['user']
+    pw = bga_login['password']
+
+    wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[2]/div/input')))
+    it_username = driver.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[2]/div/input')
+
+    it_username.send_keys(username)
+    time.sleep(2)
+
+    wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[3]/div/a')))
+    driver.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[3]/div/a').click()
+    time.sleep(1)
+
+    wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[2]/div/form/div[1]/div[2]/div/input')))
+    it_password = driver.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[2]/div/form/div[1]/div[2]/div/input')
+    it_password.send_keys(pw)
+    time.sleep(2)
+
+    wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[2]/div/form/div[2]/div/div/a')))
+    driver.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[2]/div/form/div[2]/div/div/a').click()
+
+    time.sleep(1)
+
+    wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[3]/div[2]/div[3]/div[3]/div/div/a')))
+    driver.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[3]/div[2]/div[3]/div[3]/div/div/a').click()
+    time.sleep(1)
+    print("login successful")
+
 
 def elo_hist( game_def,     # id or name of the game,
               player_names, # the players' BGA name separated by comma
