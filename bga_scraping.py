@@ -449,6 +449,7 @@ def elo_hist( game_def,     # id or name of the game,
                 tableNum += 1
                 tableObj = tableClass(1000000 - tableSeq, tableId, endDate, endTst, newELO, unranked, False, False, False)
                 tableList.append(tableObj)
+                current_date = current_date + timedelta(days=1)
 
 
             print(str(tableNum) + " games total")
