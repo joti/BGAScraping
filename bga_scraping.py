@@ -4,6 +4,7 @@
 import time
 import sys
 import yaml
+import re
 import os.path
 
 from datetime import datetime, timedelta
@@ -568,6 +569,107 @@ def elo_hist( game_def,     # id or name of the game,
     
     time.sleep(1)
 
+def trn_gamecoll( trn_id,   # id of the tournament
+                  file_name # name of file to export data
+                ):
+
+    trn_file = ""
+    if file_name == ".":
+        trn_file = ("tournament_" + trn_id + ".games")
+    elif file_name != "":
+        trn_file = file_name
+    else :
+        trn_file = ""
+        
+    if trn_file != "" and output_path != "" :
+        if os.path.isdir(output_path):
+            trn_file = output_path + trn_file
+        else :
+            print(output_path + " does not exist")
+    if trn_file != "" :
+        print("Output file: " + trn_file)
+
+    close_popup()
+
+    # to get game stats we need to log in
+    login()
+    time.sleep(1)
+
+    start_millisec = int(time.time() * 1000)
+    
+    trn_url = (bga_data['urls']['tournament'].
+                             replace('{p1}', trn_id))
+    print(trn_url)
+
+# div containing all games of the tournament:
+
+# Swiss system:
+# XPath:       //*[@id="stage_display"]/div/div/div[2]
+# Full XPath:  /html/body/div[2]/div[5]/div[1]/div/div/div[4]/div/div/div/div/div[2]
+
+# Round-robin (1 stage)
+# XPath:       //*[@id="stage_display"]/div/div/div[2]
+# Full XPath:  /html/body/div[2]/div[5]/div[1]/div/div/div[4]/div/div/div/div/div[2]
+
+# Round-robin (2 stage):
+# XPath:       //*[@id="stage_display"]/div/div/div/div[2]/div[3]/div[2]
+# Full XPath:  /html/body/div[2]/div[5]/div[1]/div/div/div[4]/div/div/div/div/div/div[2]/div[3]/div[2]
+
+# class of div containing all games:          v2tournament__encounters
+# class of emelents containing link to games: v2tournament__encounter-title
+
+    trycount = 0
+    success = False
+    while not success:
+        try:
+            if trycount == 0:
+                driver.get(trn_url)
+            else:    
+                driver.refresh()
+                print("refresh")
+            elements = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "v2tournament__encounter-title")))
+            
+            success = True
+        except TimeoutException:
+            time.sleep(1)
+            trycount += 1
+            if trycount == 3:
+                print("Cannot load tournament page.")
+                exit_program()            
+
+    print("Tournament page loaded.")
+    print("Number of games:" + str(len(elements)))
+
+    table_ids = []
+
+    for elem in elements:
+        href = elem.get_attribute("href")
+        if href:
+            match = re.search(r"table=(\d+)", href)
+            if match:
+                table_ids.append(match.group(1))
+
+    file_opened = False
+    if trn_file != "":
+        try:
+            f = open(trn_file, "w")
+            file_opened = True
+
+            for table_id in table_ids:
+                f.write(table_id + "\n")
+        except:
+            print("Cannot write file " + trn_file)
+        finally:    
+            if file_opened:
+                f.close()
+
+
+    end_millisec = int(time.time() * 1000)
+
+    print("Complete runtime: " + str(end_millisec - start_millisec) + " ms")
+                  
+    time.sleep(1)
+
 
 PRIVCONFIG_FILE = r'conf_priv.yml'
 with open(PRIVCONFIG_FILE, 'r') as f:
@@ -598,6 +700,7 @@ if argnum > 1 :
 else :
     func = 'elo_hist'
 
+trn_id = ""
 game_def = ""
 player_names = ""
 file_name = ""
@@ -611,6 +714,8 @@ if argnum > 2 :
             break
             
         match sys.argv[argpos]:
+            case "-t":
+                trn_id = sys.argv[argpos + 1]
             case "-g":
                 game_def = sys.argv[argpos + 1]
             case "-p":
@@ -631,6 +736,8 @@ match func :
         elo_hist(game_def, player_names, min_date, max_date, file_name, subfunc_set)
     case "login":    
         login()
+    case "trn_gamecoll":
+        trn_gamecoll(trn_id, file_name)
     case _:
         print("unknown function")
     
