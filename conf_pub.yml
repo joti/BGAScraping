@@ -31,3 +31,5 @@
       gamestats: https://www.boardgamearena.com/gamestats?player={p1}&game_id={p2}
       gamestatsfull: https://www.boardgamearena.com/gamestats?player={p1}&game_id={p2}&opponent_id={p3}&end_date={p4}&finished=1
       tournament: https://boardgamearena.com/tournament?id={p1}
+      table: https://boardgamearena.com/table?table={p1}&nr
+      gamereview: https://boardgamearena.com/gamereview?table={p1}

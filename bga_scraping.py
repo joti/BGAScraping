@@ -70,6 +70,11 @@ def login24():
     driver.find_element(By.ID, "submit_login_button").click()
 
 def login():
+    global loggedIn
+    global lang
+    
+    if loggedIn == True :
+        return        
 
     login_link = bga_data['urls']['login']
     print(login_link);
@@ -101,7 +106,15 @@ def login():
     wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[3]/div[2]/div[3]/div[3]/div/div/a')))
     driver.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[3]/div[2]/div[3]/div[3]/div/div/a').click()
     time.sleep(1)
+    loggedIn = True
     print("login successful")
+
+    forumlink = driver.find_element(By.XPATH, "//a[contains(@href, 'forum')]")
+    print(forumlink.text)
+    if forumlink.text.upper() == 'FORUMS' :
+        lang = "en"
+    print(lang)
+    
 
 
 def elo_hist( game_def,     # id or name of the game,
@@ -111,6 +124,8 @@ def elo_hist( game_def,     # id or name of the game,
               file_name,    # name of file to export data
               subfunc_set   # subfunctions to execute
             ):
+
+    global lang
 
     ROW_LIMIT = 200
 
@@ -243,6 +258,12 @@ def elo_hist( game_def,     # id or name of the game,
         gameStatsLoadTotalTime = 0
         gameStatsProcTotalTime = 0
         endTst = None
+
+        match lang :
+            case "hu":
+                dateFormat = "%Y.%m.%d"
+            case _ :    
+                dateFormat = "%m/%d/%Y"
         
         while needSearch :
             # convert date to lixux timestamp
@@ -402,11 +423,11 @@ def elo_hist( game_def,     # id or name of the game,
                 
                 match endDate :
                     case "tegnap" | "yesterday":
-                        endDate = (datetime.today() - timedelta(days=1)).strftime('%Y.%m.%d')
+                        endDate = (datetime.today() - timedelta(days=1)).strftime(dateFormat)
                     case _ :    
                         if len(endDate) < 3 or endDate[0].isalpha() :
                             # "20 minutes ago" / "today"
-                            endDate = datetime.today().strftime('%Y.%m.%d')
+                            endDate = datetime.today().strftime(dateFormat)
 
                 #print(endDate + " " + endTime)                
 
@@ -415,7 +436,7 @@ def elo_hist( game_def,     # id or name of the game,
                     endTst = datetime.timestamp(endDateTime)
                     #print(str(endDateTime) + " -> " + str(int(endTst)))
                 
-                endDateDT = datetime.strptime(endDate, '%Y.%m.%d')
+                endDateDT = datetime.strptime(endDate, dateFormat)
                 if endDateDT < current_date :
                     current_date = endDateDT
                 else :
@@ -569,7 +590,7 @@ def elo_hist( game_def,     # id or name of the game,
     
     time.sleep(1)
 
-def trn_gamecoll( trn_id,   # id of the tournament
+def trn_tablecoll( trn_id,   # id of the tournament
                   file_name # name of file to export data
                 ):
 
@@ -593,7 +614,6 @@ def trn_gamecoll( trn_id,   # id of the tournament
 
     # to get game stats we need to log in
     login()
-    time.sleep(1)
 
     start_millisec = int(time.time() * 1000)
     
@@ -671,6 +691,190 @@ def trn_gamecoll( trn_id,   # id of the tournament
     time.sleep(1)
 
 
+def tableproc( table_id, # id of the table
+               file_name # name of file to save data
+             ):
+
+    if len(table_id) < 8 :
+        print("Wrong table id: " + table_id)
+        return
+
+    table_file = ""
+    if file_name == ".":
+        table_file = ("review_" + table_id + ".html")
+    elif file_name != "":
+        table_file = file_name
+    else :
+        table_file = ""
+        
+    if table_file != "" and output_path != "" :
+        if os.path.isdir(output_path):
+            table_file = output_path + table_file
+        else :
+            print(output_path + " does not exist")
+    if table_file != "" :
+        print("Output file: " + table_file)
+
+    close_popup()
+
+    # to get game stats we need to log in
+    login()
+
+    start_millisec = int(time.time() * 1000)
+
+    # requests are not suitable for collecting table data - the responses don't contain the relevant components
+    # thus we have to use Selenium for this purpose as well
+    
+    table_url = (bga_data['urls']['table'].replace('{p1}', table_id))
+    #table_url = (bga_data['urls']['gamereview'].replace('{p1}', table_id))
+    print(table_url)
+
+    trycount = 0
+    success = False
+    while not success:
+        try:
+            if trycount == 0:
+                driver.get(table_url)
+            else:    
+                driver.refresh()
+                print("refresh")
+            #wait.until(EC.visibility_of_element_located((By.ID, "gametable_box")))
+            wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "score")))
+            success = True
+        except TimeoutException:
+            time.sleep(1)
+            trycount += 1
+            if trycount == 3:
+                print("Cannot load table page.")
+                exit_program()            
+
+    # relevant ids:
+    # - div id = gameoptions: game settings
+    # - div id = game_result: player names and result of the game
+    # - div id = statistics_content:
+    #   - div id = table_stats
+    #   - table id = player_stats_table
+
+    print("oldal betöltve")
+    result_div = driver.find_element(By.XPATH, "//div[@id='game_result']")
+    print("result_div OK")
+    player_divs = result_div.find_elements(By.XPATH, "./div")
+    print(len(player_divs))
+
+    for player_div in player_divs:
+
+        player_elem = player_div.find_element(By.XPATH, ".//a[@class='playername']")
+
+        player_name = player_elem.text
+        print(f"Játékos név: {player_name}")
+
+        href_value = player_elem.get_attribute("href")
+        match = re.search(r"id=(\d+)", href_value)
+        if match:
+            player_id = match.group(1)
+        else:
+            player_id = "N/A"
+        print(f"Játékos id: {player_id}")
+
+        score_div = player_div.find_element(By.XPATH, ".//div[@class='score']")
+        player_score = score_div.text.split()[0]        
+        print(f"Játékos pontszáma: {player_score}")
+
+        newrank_span = player_div.find_element(By.XPATH, ".//span[@class='gamerank_value ']")
+        player_newrank = newrank_span.text.split()[0]        
+        print(f"Játékos új Élője: {player_newrank}")
+
+        winpt_span = player_div.find_element(By.XPATH, ".//span[starts-with(@id, 'winpoints_value')]")
+        player_winpt = winpt_span.text.split()[0]        
+        print(f"Játékos Élő változása: {player_winpt}")
+
+    stat_div = driver.find_element(By.XPATH, "//div[@id='statistics_content']")
+    print("stat_div OK")
+    tablestat_div = stat_div.find_element(By.XPATH, ".//div[@id='table_stats']")
+    print("tablestat_div OK")
+    tablestatrow_divs = tablestat_div.find_elements(By.XPATH, "./div[@class='row-data']")
+    print(len(player_divs))
+
+    table_duration = "" 
+    table_width = "" 
+    table_height = "" 
+    table_ccities = "" 
+    for tablestatrow_div in tablestatrow_divs:
+        tablestatrow_label = tablestatrow_div.find_element(By.XPATH, "./div[@class='row-label']")
+        tablestatrow_value = tablestatrow_div.find_element(By.XPATH, "./div[@class='row-value']")
+        match tablestatrow_label.text :
+            case "Játékhossz" | "Game duration":
+                table_duration = tablestatrow_value.text.strip()
+            case "Tábla szélessége" | "Board width" :                
+                table_width = tablestatrow_value.text.strip()
+            case "Tábla magassága" | "Board height" :                
+                table_height = tablestatrow_value.text.strip()
+            case "Befejezett városok" | "Completed cities" :                
+                table_ccities = tablestatrow_value.text.strip()
+
+    print(f"Tábla szélessége: {table_width}")
+    print(f"Tábla magassága: {table_height}")
+    print(f"Játékhossz: {table_duration}")
+    print(f"Befejezett városok: {table_ccities}")
+
+    playerstattable = stat_div.find_element(By.XPATH, ".//table[@id='player_stats_table']")
+    print("playerstat_table OK")
+
+    player1_time = ""
+    player2_time = ""
+    player1_roadpt = ""
+    player2_roadpt = ""
+    player1_citypt = ""
+    player2_citypt = ""
+    player1_monasterypt = ""
+    player2_monasterypt = ""
+    player1_fieldpt = ""
+    player2_fieldpt = ""
+    player1_meeples = ""
+    player2_meeples = ""
+
+    for playerstatrow in playerstattable.find_elements(by=By.XPATH, value =".//tr"):
+        playerstatrow_head = playerstatrow.find_element(By.XPATH, "./th")
+        playerstatrow_cols = playerstatrow.find_elements(By.TAG_NAME, "td")
+        if playerstatrow_cols :
+        
+            #playerstatrow_col1 = playerstatrow.find_element(By.XPATH, ".//td[1]")
+            #playerstatrow_col2 = playerstatrow.find_element(By.XPATH, ".//td[2]")
+
+            match playerstatrow_head.text :
+                case "Gondolkodási idő" | "Thinking time":
+                    player1_time = playerstatrow_cols[0].text.strip()
+                    player2_time = playerstatrow_cols[1].text.strip()
+                case "Utakért kapott pontok" | "Points from roads" :                
+                    player1_roadpt = playerstatrow_cols[0].text.strip()
+                    player2_roadpt = playerstatrow_cols[1].text.strip()
+                case "Városokért kapott pontok" | "Points from cities" :                
+                    player1_citypt = playerstatrow_cols[0].text.strip()
+                    player2_citypt = playerstatrow_cols[1].text.strip()
+                case "Kolostorokért kapott pontok" | "Points from monasteries" :                
+                    player1_monasterypt = playerstatrow_cols[0].text.strip()
+                    player2_monasterypt = playerstatrow_cols[1].text.strip()
+                case "Mezőkért kapott pontok" | "Points from fields" :                
+                    player1_fieldpt = playerstatrow_cols[0].text.strip()
+                    player2_fieldpt = playerstatrow_cols[1].text.strip()
+                case "Kijátszott alattvalók" | "Meeples placed" :                
+                    player1_meeples = playerstatrow_cols[0].text.strip()
+                    player2_meeples = playerstatrow_cols[1].text.strip()
+
+    print(f"Gondolkodási idők: {player1_time} - {player2_time}")
+    print(f"Utakért kapott pontok: {player1_roadpt} - {player2_roadpt}")
+    print(f"Városokért kapott pontok: {player1_citypt} - {player2_citypt}")
+    print(f"Kolostorokért kapott pontok: {player1_monasterypt} - {player2_monasterypt}")
+    print(f"Mezőkért kapott pontok: {player1_fieldpt} - {player2_fieldpt}")
+    print(f"Kijátszott alattvalók: {player1_meeples} - {player2_meeples}")
+
+
+    end_millisec = int(time.time() * 1000)
+
+    print("Complete runtime: " + str(end_millisec - start_millisec) + " ms")
+
+
+
 PRIVCONFIG_FILE = r'conf_priv.yml'
 with open(PRIVCONFIG_FILE, 'r') as f:
     config = yaml.safe_load(f)
@@ -691,6 +895,8 @@ options.binary_location = chrome_path
 options.add_argument("--log-level=1")
 driver = webdriver.Chrome(service=service, options=options)
 wait = WebDriverWait(driver, 15)
+loggedIn = False
+lang = "hu"
 
 # 1st param.: function to call
 argnum = len(sys.argv)
@@ -700,6 +906,7 @@ if argnum > 1 :
 else :
     func = 'elo_hist'
 
+table_id = ""
 trn_id = ""
 game_def = ""
 player_names = ""
@@ -716,6 +923,8 @@ if argnum > 2 :
         match sys.argv[argpos]:
             case "-t":
                 trn_id = sys.argv[argpos + 1]
+            case "-b":
+                table_id = sys.argv[argpos + 1]
             case "-g":
                 game_def = sys.argv[argpos + 1]
             case "-p":
@@ -736,8 +945,10 @@ match func :
         elo_hist(game_def, player_names, min_date, max_date, file_name, subfunc_set)
     case "login":    
         login()
-    case "trn_gamecoll":
-        trn_gamecoll(trn_id, file_name)
+    case "trn_tablecoll":
+        trn_tablecoll(trn_id, file_name)
+    case "tableproc":
+        tableproc(table_id, file_name)
     case _:
         print("unknown function")
     
