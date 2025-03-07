@@ -1373,7 +1373,7 @@ def tableproc( table_code, # id of the table
             else:    
                 DRIVER.refresh()
                 print("Refresh")
-            WAIT.until(EC.visibility_of_element_located((By.ID, "display_time_on_logs")))
+            WAIT.until(EC.visibility_of_element_located((By.ID, "gamelogs")))
             success = True
         except TimeoutException:
             time.sleep(1)
@@ -1382,14 +1382,20 @@ def tableproc( table_code, # id of the table
                 print("Cannot load gamereview page.")
                 exit_program()            
 
-    checkbox = DRIVER.find_element(By.ID, "display_time_on_logs")
     # it isn't necessary to click the checkbox: time logs are part of the DOM (but they're invisible due to display: none)
+    #checkbox = DRIVER.find_element(By.ID, "display_time_on_logs")
     #if not checkbox.is_selected():
         #checkbox.click()
 
     time.sleep(1)
 
     gamelogs_div = DRIVER.find_element(By.XPATH, "//div[@id='gamelogs']")
+    logrow_divs = gamelogs_div.find_elements(By.XPATH, "./div")
+    if len(logrow_divs) == 0 :
+        print("Cannot load gamereview data, probably reaching limit...")
+        exit_program()
+
+    print("Gamereview loaded")
 
     move_number = 0
     step_number = 1
@@ -1414,7 +1420,7 @@ def tableproc( table_code, # id of the table
     carcsteps : List[CarcStep] = [] 
     carcstepObj = None
 
-    for logrow_div in gamelogs_div.find_elements(By.XPATH, "./*"):
+    for logrow_div in logrow_divs:
 
         class_value = logrow_div.get_attribute("class")
         class_list = class_value.split()
@@ -1559,53 +1565,57 @@ def tableproc( table_code, # id of the table
 
      
     print(f"No. of steps: {len(carcsteps)}")
-    if len(carcsteps) > 0 :
-        carcevent = CarcEvent.START
-        carcstepObj = CarcStep(table_code=table_code, seq=1, turn=1, bgamove=1, turnplayer=start_player_pos, stepplayer=start_player_pos,
-                               event=carcevent, feature=carcfeature, tile=carctile, score=0, desc="", time=starttimeinfo, clock1=startclock, clock2=startclock)
-        carcsteps.append(carcstepObj)
+    if len(carcsteps) == 0 :
+        print("Gamelog not available...")
+        exit_program()            
+        #return          
+       
+    carcevent = CarcEvent.START
+    carcstepObj = CarcStep(table_code=table_code, seq=1, turn=1, bgamove=1, turnplayer=start_player_pos, stepplayer=start_player_pos,
+                           event=carcevent, feature=carcfeature, tile=carctile, score=0, desc="", time=starttimeinfo, clock1=startclock, clock2=startclock)
+    carcsteps.append(carcstepObj)
 
-        # post processing 1: filling missing clock values
-        turnswithclock1 = set()
-        turnswithclock2 = set()
+    # post processing 1: filling missing clock values
+    turnswithclock1 = set()
+    turnswithclock2 = set()
+    for carcstep in carcsteps:
+        if carcstep.clock1 != "":
+            turnswithclock1.add(carcstep.turn)
+        if carcstep.clock2 != "":
+            turnswithclock2.add(carcstep.turn)
+    lastturn = 0
+
+    for index in range(2):
+        if index == 0:
+            carcsteps.sort(key=lambda carcstep: -1*carcstep.seq)
+        else:    
+            carcsteps.sort(key=lambda carcstep: carcstep.seq)
+
+        prevclock1 = ""
+        prevclock2 = ""
+        prevturn = 0
+
         for carcstep in carcsteps:
-            if carcstep.clock1 != "":
-                turnswithclock1.add(carcstep.turn)
-            if carcstep.clock2 != "":
-                turnswithclock2.add(carcstep.turn)
-        lastturn = 0
+            if index == 0 and lastturn == 0:
+                lastturn = carcstep.turn
+            
+            if carcstep.clock1 == "" and carcstep.turn in turnswithclock1:
+                if carcstep.turn == prevturn and prevclock1 != "":
+                    carcstep.clock1 = prevclock1
+            if carcstep.clock2 == "" and carcstep.turn in turnswithclock2:
+                if carcstep.turn == prevturn and prevclock2 != "":
+                    carcstep.clock2 = prevclock2
 
-        for index in range(2):
-            if index == 0:
-                carcsteps.sort(key=lambda carcstep: -1*carcstep.seq)
-            else:    
-                carcsteps.sort(key=lambda carcstep: carcstep.seq)
+            if carcstep.clock1 == "" and not carcstep.turn in turnswithclock1:
+                if ((index == 0 and carcstep.turnplayer == 2) or (index == 1 and (carcstep.turnplayer == 1 or carcstep.turn == lastturn)) ) and prevclock1 != "":
+                    carcstep.clock1 = prevclock1
+            if carcstep.clock2 == "" and not carcstep.turn in turnswithclock2:
+                if ((index == 0 and carcstep.turnplayer == 1) or (index == 1 and carcstep.turnplayer == 2)) and prevclock2 != "":
+                    carcstep.clock2 = prevclock2
 
-            prevclock1 = ""
-            prevclock2 = ""
-            prevturn = 0
-
-            for carcstep in carcsteps:
-                if index == 0 and lastturn == 0:
-                    lastturn = carcstep.turn
-                
-                if carcstep.clock1 == "" and carcstep.turn in turnswithclock1:
-                    if carcstep.turn == prevturn and prevclock1 != "":
-                        carcstep.clock1 = prevclock1
-                if carcstep.clock2 == "" and carcstep.turn in turnswithclock2:
-                    if carcstep.turn == prevturn and prevclock2 != "":
-                        carcstep.clock2 = prevclock2
-
-                if carcstep.clock1 == "" and not carcstep.turn in turnswithclock1:
-                    if ((index == 0 and carcstep.turnplayer == 2) or (index == 1 and (carcstep.turnplayer == 1 or carcstep.turn == lastturn)) ) and prevclock1 != "":
-                        carcstep.clock1 = prevclock1
-                if carcstep.clock2 == "" and not carcstep.turn in turnswithclock2:
-                    if ((index == 0 and carcstep.turnplayer == 1) or (index == 1 and carcstep.turnplayer == 2)) and prevclock2 != "":
-                        carcstep.clock2 = prevclock2
-
-                prevclock1 = carcstep.clock1
-                prevclock2 = carcstep.clock2
-                prevturn = carcstep.turn
+            prevclock1 = carcstep.clock1
+            prevclock2 = carcstep.clock2
+            prevturn = carcstep.turn
 
         
     if output_dir != "" :
