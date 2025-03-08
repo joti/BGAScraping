@@ -151,47 +151,6 @@ class CarcStep:
     id: Optional[int] = None
     table_id: int = 0 # link to a table
 
-# seq turn move tplr splr evt fea score desc                                                          time                   clock1  clock2 
-# --- ---- ---- ---- ---- --- --- ----- ------------------------------------------------------------- ---------------------- ------- -------
-#   1    1    2    2    2  T            El_Pitufo_DV lerak egy lapkát                                 2025.03.03. 01:07:06   2:12    1:43   
-#   2    1    3    2    2  M   M        El_Pitufo_DV lerak egy alattvalót ide: kolostor               2025.03.03. 01:07:46   2:12    1:42   
-#   3    2    4    1    1  T            Lord Trooper lerak egy lapkát                                 2025.03.03. 01:07:47   2:06    1:42   
-#   4    2    5    1    1  M   R        Lord Trooper lerak egy alattvalót ide: út                     2025.03.03. 01:08:06   2:04    2:06 
-#   5    3    6    2    2  T            El_Pitufo_DV lerak egy lapkát                                 ...                    ...     ... 
-#   6    3    7    2    2  M   C        El_Pitufo_DV lerak egy alattvalót ide: város
-#   7    4    8    1    1  T            Lord Trooper lerak egy lapkát
-#   8    4    9    1    1  M   M        Lord Trooper lerak egy alattvalót ide: kolostor
-#   9    5    9    2    2  D            El_Pitufo_DV nem tudja lerakni ezt a lapkát és újat húz: 
-#  10    5    9    2    2  D            El_Pitufo_DV nem tudja lerakni ezt a lapkát és újat húz: 
-#  11    5   10    2    2  T            El_Pitufo_DV lerak egy lapkát
-#  12    5   11    2    2  M   F        El_Pitufo_DV lerak egy alattvalót ide: mező
-#  13    5   11    2    2  C   C        El_Pitufo_DV befejezte ezt: város 
-#  14    5   11    2    2  S          6 El_Pitufo_DV szerez 6 pontot
-# ...
-#  98   47   85    2    2  T            El_Pitufo_DV lerak egy lapkát 
-#  99   47   86    2    2  M   M        El_Pitufo_DV lerak egy alattvalót ide: kolostor
-# 100   47   86    2    2  C   M        El_Pitufo_DV befejezte ezt: kolostor
-# 101   47   86    2    2  S          9 El_Pitufo_DV szerez 9 pontot 
-# 102   47   86    2    2  C   M        El_Pitufo_DV befejezte ezt: kolostor
-# 103   47   86    2    1  S          9 Lord Trooper szerez 9 pontot
-
-# ...
-# 161   69   130   2    2  T            El_Pitufo_DV lerak egy lapkát
-# 162   69   131   2    2  M   F        El_Pitufo_DV lerak egy alattvalót ide: mező
-# 163   69   131   2    2  C   R        El_Pitufo_DV befejezte ezt: út
-# 164   69   131   2    2  S          6 El_Pitufo_DV szerez 6 pontot
-# 165   69   131   2    1  S          6 Lord Trooper szerez 6 pontot
-# 166   69   131   2    0  F   C        Befejezetlen város elszámolása
-# 167   69   131   2    1  S         10 Lord Trooper szerez 10 pontot   
-# 168   69   131   2    0  F   C        Befejezetlen város elszámolása
-# 169   69   131   2    1  S          4 Lord Trooper szerez 4 pontot   
-# 170   69   131   2    0  F   F        Ez a mező 5 várost lát el, és 15 pontot ér
-# 171   69   131   2    1  S         15 Lord Trooper 15 pontot szerez 1 paraszttal   
-# 172   69   131   2    2  S         15 El_Pitufo_DV 15 pontot szerez 1 paraszttal   
-
-# ...
-# 115   52   101   2    2  X            El_Pitufo_DV feladja a játékot.     
-
 def exit_program():
     print("Exiting...")
     sys.exit(0)
@@ -346,6 +305,11 @@ def init_db():
         )
         """)
         print("Table 'table_' created")
+
+        cursor.execute("""
+        CREATE INDEX idx_table_trn_id ON table_(tournament_id)
+        """)
+        print("Index 'idx_table_trn_id' created")
     
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS player (
@@ -377,7 +341,16 @@ def init_db():
             FOREIGN KEY (player_id) REFERENCES player(player_id)
         )
         """)
-        print("Table 'gameplayer' created")
+        print("Table 'tableplayer' created")
+
+        cursor.execute("""
+        CREATE UNIQUE INDEX idx_tableplayer_tbl_id ON tableplayer(table_id, player_id)
+        """)
+        print("Index 'idx_tableplayer_tbl_id' created")
+        cursor.execute("""
+        CREATE INDEX idx_tableplayer_pyr_id ON tableplayer(player_id)
+        """)
+        print("Index 'idx_tableplayer_pyr_id' created")
 
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS carcstep (
@@ -400,6 +373,11 @@ def init_db():
         )
         """)
         print("Table 'carcstep' created")
+
+        cursor.execute("""
+        CREATE UNIQUE INDEX idx_carcstep_tbl_id ON carcstep(table_id, seq)
+        """)
+        print("Index 'idx_carcstep_tbl_id' created")
 
         connection.commit()
 
