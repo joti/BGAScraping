@@ -285,7 +285,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS tournament (
             tournament_id INTEGER PRIMARY KEY AUTOINCREMENT,
             code TEXT UNIQUE NOT NULL,
-            name TEXT NOT NULL,
+            name TEXT NOT NULL,           -- WTCOC25 - Group 1 - FIN-HUN / TCF - FIN-HUN 2025-03-09
             inbga BOOLEAN NOT NULL CHECK (inbga IN (0, 1))
         )
         """)
@@ -531,6 +531,9 @@ def elo_hist( game_def,     # id or name of the game,
     login()
     time.sleep(1)
 
+    gameStatsLoadTotalTime = 0
+    gameStatsProcTotalTime = 0
+
     start_millisec = int(time.time() * 1000)
 
     for player_name in player_names.split(","):
@@ -587,15 +590,8 @@ def elo_hist( game_def,     # id or name of the game,
         tableNum = 0
         tableIdSet = {}
         tableList = []
-        gameStatsLoadTotalTime = 0
-        gameStatsProcTotalTime = 0
         endTst = None
-
-        match lang :
-            case "hu":
-                dateFormat = "%Y.%m.%d"
-            case _ :    
-                dateFormat = "%m/%d/%Y"
+        dateFormat = "%Y.%m.%d"
         
         while needSearch :
             # convert date to lixux timestamp
