@@ -876,6 +876,8 @@ def elo_hist( game_def,     # id or name of the game,
             if maxDateDT != datetime.max :
                 f.write("End date of examination: " + maxDateStr + "\n")
             f.write("Examination started at " + startDT.strftime("%Y.%m.%d %H:%M:%S") + "\n")
+            startDT = datetime.now()
+            f.write("Examination finished at " + startDT.strftime("%Y.%m.%d %H:%M:%S") + "\n")
             f.write("\n")
 
         print()
@@ -1072,7 +1074,10 @@ def tablelistproc( tables_file, # name of the input file containing table ids
                 elif table_code.startswith("#") :   
                     trn_name = table_code[1:].strip()
                     print(f"Tournament name: {trn_name}")
-                else :    
+                else :
+                    match = re.search(r"(\d+)\s*$", table_code)
+                    if match:
+                        table_code = match.group(1)
                     print(f"Table no. {table_code}")
                     tableproc(table_code, output_subdir, trn_code=trn_code, trn_name=trn_name, connection=connection)
 
