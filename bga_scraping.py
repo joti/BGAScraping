@@ -1099,6 +1099,8 @@ def tableproc( table_code, # id of the table
                connection = None # optional database connection for saving data
              ):
 
+    global lang
+
     if len(table_code) < 8 :
         print("Wrong table id: " + table_code)
         return
@@ -1264,19 +1266,37 @@ def tableproc( table_code, # id of the table
     table_duration = "" 
     table_width = 0 
     table_height = 0 
-    table_ccities = "" 
+    table_ccities = ""
+
+    DURATION_LABELS = {
+        "hu": "Játékhossz",
+        "en": "Game duration"
+    }
+    WIDTH_LABELS = {
+        "hu": "Tábla szélessége",
+        "en": "Board width"
+    }
+    HEIGHT_LABELS = {
+        "hu": "Tábla magassága",
+        "en": "Board height"
+    }
+    CCITIES_LABELS = {
+        "hu": "Befejezett városok",
+        "en": "Completed cities"
+    }
+    
     for tablestatrow_div in tablestatrow_divs:
         tablestatrow_label = tablestatrow_div.find_element(By.XPATH, "./div[@class='row-label']")
         tablestatrow_value = tablestatrow_div.find_element(By.XPATH, "./div[@class='row-value']")
-        match tablestatrow_label.text :
-            case "Játékhossz" | "Game duration":
-                table_duration = tablestatrow_value.text.strip()
-            case "Tábla szélessége" | "Board width" :                
-                table_width = int(tablestatrow_value.text.strip())
-            case "Tábla magassága" | "Board height" :                
-                table_height = int(tablestatrow_value.text.strip())
-            case "Befejezett városok" | "Completed cities" :                
-                table_ccities = int(tablestatrow_value.text.strip())
+
+        if tablestatrow_label.text == DURATION_LABELS[lang] :
+            table_duration = tablestatrow_value.text.strip()
+        elif tablestatrow_label.text == WIDTH_LABELS[lang] :    
+            table_width = int(tablestatrow_value.text.strip())
+        elif tablestatrow_label.text == HEIGHT_LABELS[lang] :    
+            table_height = int(tablestatrow_value.text.strip())
+        elif tablestatrow_label.text == CCITIES_LABELS[lang] :    
+            table_ccities = int(tablestatrow_value.text.strip())
 
     tableObj = Table(tournament_code=tournament_code, code=table_code, game_code = "1", width=table_width, height=table_height, duration=table_duration, ccities=table_ccities)
 
@@ -1289,48 +1309,69 @@ def tableproc( table_code, # id of the table
     player1_fieldpt = player2_fieldpt = 0
     player1_meeples = player2_meeples = 0
 
+    TIME_LABELS = {
+        "hu": "Gondolkodási idő",
+        "en": "Thinking time"
+    }
+    ROADPT_LABELS = {
+        "hu": "Utakért kapott pontok",
+        "en": "Points from roads"
+    }
+    CITYPT_LABELS = {
+        "hu": "Városokért kapott pontok",
+        "en": "Points from cities"
+    }
+    MONASTERYPT_LABELS = {
+        "hu": "Kolostorokért kapott pontok",
+        "en": "Points from monasteries"
+    }
+    FIELDPT_LABELS = {
+        "hu": "Mezőkért kapott pontok",
+        "en": "Points from fields"
+    }
+    MEEPLES_LABELS = {
+        "hu": "Kijátszott alattvalók",
+        "en": "Meeples placed"
+    }
+
     for playerstatrow in playerstattable.find_elements(by=By.XPATH, value =".//tr"):
         playerstatrow_head = playerstatrow.find_element(By.XPATH, "./th")
         playerstatrow_cols = playerstatrow.find_elements(By.TAG_NAME, "td")
         if playerstatrow_cols :
         
-            #playerstatrow_col1 = playerstatrow.find_element(By.XPATH, ".//td[1]")
-            #playerstatrow_col2 = playerstatrow.find_element(By.XPATH, ".//td[2]")
-
-            match playerstatrow_head.text :
-                case "Gondolkodási idő" | "Thinking time":
-                    player1_time = playerstatrow_cols[0].text.strip()
-                    player2_time = playerstatrow_cols[1].text.strip()
-                case "Utakért kapott pontok" | "Points from roads" :
-                    try:
-                        player1_roadpt = int(playerstatrow_cols[0].text.strip())
-                        player2_roadpt = int(playerstatrow_cols[1].text.strip())
-                    except ValueError:
-                        pass
-                case "Városokért kapott pontok" | "Points from cities" :                
-                    try:
-                        player1_citypt = int(playerstatrow_cols[0].text.strip())
-                        player2_citypt = int(playerstatrow_cols[1].text.strip())
-                    except ValueError:
-                        pass
-                case "Kolostorokért kapott pontok" | "Points from monasteries" :                
-                    try:
-                        player1_monasterypt = int(playerstatrow_cols[0].text.strip())
-                        player2_monasterypt = int(playerstatrow_cols[1].text.strip())
-                    except ValueError:
-                        pass
-                case "Mezőkért kapott pontok" | "Points from fields" :                
-                    try:
-                        player1_fieldpt = int(playerstatrow_cols[0].text.strip())
-                        player2_fieldpt = int(playerstatrow_cols[1].text.strip())
-                    except ValueError:
-                        pass
-                case "Kijátszott alattvalók" | "Meeples placed" :                
-                    try:
-                        player1_meeples = int(playerstatrow_cols[0].text.strip())
-                        player2_meeples = int(playerstatrow_cols[1].text.strip())
-                    except ValueError:
-                        pass
+            if playerstatrow_head.text == TIME_LABELS[lang] :
+                player1_time = playerstatrow_cols[0].text.strip()
+                player2_time = playerstatrow_cols[1].text.strip()
+            elif playerstatrow_head.text == ROADPT_LABELS[lang] :
+                try:
+                    player1_roadpt = int(playerstatrow_cols[0].text.strip())
+                    player2_roadpt = int(playerstatrow_cols[1].text.strip())
+                except ValueError:
+                    pass
+            elif playerstatrow_head.text == CITYPT_LABELS[lang] :
+                try:
+                    player1_citypt = int(playerstatrow_cols[0].text.strip())
+                    player2_citypt = int(playerstatrow_cols[1].text.strip())
+                except ValueError:
+                    pass
+            elif playerstatrow_head.text == MONASTERYPT_LABELS[lang] :
+                try:
+                    player1_monasterypt = int(playerstatrow_cols[0].text.strip())
+                    player2_monasterypt = int(playerstatrow_cols[1].text.strip())
+                except ValueError:
+                    pass
+            elif playerstatrow_head.text == FIELDPT_LABELS[lang] :
+                try:
+                    player1_fieldpt = int(playerstatrow_cols[0].text.strip())
+                    player2_fieldpt = int(playerstatrow_cols[1].text.strip())
+                except ValueError:
+                    pass
+            elif playerstatrow_head.text == MEEPLES_LABELS[lang] :
+                try:
+                    player1_meeples = int(playerstatrow_cols[0].text.strip())
+                    player2_meeples = int(playerstatrow_cols[1].text.strip())
+                except ValueError:
+                    pass
 
     tableplayerObj1.time,        tableplayerObj2.time        = player1_time,        player2_time
     tableplayerObj1.roadpt,      tableplayerObj2.roadpt      = player1_roadpt,      player2_roadpt 
@@ -1399,6 +1440,56 @@ def tableproc( table_code, # id of the table
     carcsteps : List[CarcStep] = [] 
     carcstepObj = None
 
+    CITY_KEYWORDS = {
+        "hu": "város",
+        "en": "city"
+    }
+    ROAD_KEYWORDS = {
+        "hu": "út",
+        "en": "road"
+    }
+    MONASTERY_KEYWORDS = {
+        "hu": "kolostor",
+        "en": "monastery"
+    }
+    FIELD_KEYWORDS = {
+        "hu": "mező",
+        "en": "field"
+    }
+
+    MEEPLE_KEYWORDS = {
+        "hu": "alattval",
+        "en": "meeple"
+    }
+    TILE_KEYWORDS = {
+        "hu": "lerak egy",
+        "en": "places a tile"
+    }
+    DISCARD_KEYWORDS = {
+        "hu": "tudja",
+        "en": "cannot"
+    }
+    COMPLETE_KEYWORDS = {
+        "hu": "befejez",
+        "en": "complete"
+    }
+    FINALFIELD_KEYWORDS = {
+        "hu": "várost",
+        "en": "adjacent"
+    }
+    POINTS_KEYWORDS = {
+        "hu": "szerez",
+        "en": "scores"
+    }
+    FINAL_KEYWORDS = {
+        "hu": "fejezetlen",
+        "en": "incomplete"
+    }
+    CONCEDE_KEYWORDS = {
+        "hu": "feladja",
+        "en": "concedes"
+    }
+
     for logrow_div in logrow_divs:
 
         class_value = logrow_div.get_attribute("class")
@@ -1450,10 +1541,10 @@ def tableproc( table_code, # id of the table
             elif step_desc.startswith(playerObj2.name) :    
                 player_pos = 2
             
-            if "alattval" in step_desc or "meeple" in step_desc :
+            if MEEPLE_KEYWORDS[lang] in step_desc :
                 carcevent = CarcEvent.MEEPLE
                 needfeature = True
-            elif "lerak egy" in step_desc or "places a tile" in step_desc :
+            elif TILE_KEYWORDS[lang] in step_desc :
                 if carcevent != CarcEvent.DISCARD :
                     turn_number = turn_number + 1
                 carcevent = CarcEvent.TILE
@@ -1463,23 +1554,23 @@ def tableproc( table_code, # id of the table
                     start_player_pos = player_pos
                 needtile = True
                 logstart = True
-            elif "tudja" in step_desc or "cannot" in step_desc :
+            elif DISCARD_KEYWORDS[lang] in step_desc :
                 if carcevent != CarcEvent.DISCARD :
                     carcevent = CarcEvent.DISCARD
                     turn_number = turn_number + 1
                 turn_player_pos = player_pos
                 step_player_pos = player_pos
                 needtile = True
-            elif "befejez" in step_desc or "complete" in step_desc :
+            elif COMPLETE_KEYWORDS[lang] in step_desc :
                 carcevent = CarcEvent.COMPLETE
                 step_player_pos = player_pos
                 needfeature = True
-            elif "várost" in step_desc or "adjacent" in step_desc :
+            elif FINALFIELD_KEYWORDS[lang] in step_desc :
                 carcevent = CarcEvent.FINAL
                 carcfeature = CarcFeature.FIELD
                 keepfeature = True
                 step_player_pos = 0
-            elif "szerez" in step_desc or "scores" in step_desc :
+            elif POINTS_KEYWORDS[lang] in step_desc :
                 match = re.search(r'(\d+)\s+(pont|point)', step_desc, re.IGNORECASE)
                 if match:
                     score = int(match.group(1))
@@ -1489,11 +1580,11 @@ def tableproc( table_code, # id of the table
                 step_player_pos = player_pos
                 needfeature = True
                 keepfeature = True # keep the feature of the previous step
-            elif "fejezetlen" in step_desc or "incomplete" in step_desc :
+            elif FINAL_KEYWORDS[lang] in step_desc :
                 carcevent = CarcEvent.FINAL
                 step_player_pos = 0
                 needfeature = True
-            elif "feladja" in step_desc or "concedes" in step_desc :
+            elif CONCEDE_KEYWORDS[lang] in step_desc :
                 carcevent = CarcEvent.CONCEDE
                 turn_player_pos = player_pos
                 step_player_pos = player_pos
@@ -1503,13 +1594,13 @@ def tableproc( table_code, # id of the table
             if not keepfeature :
                 carcfeature = CarcFeature.VOID
                 if needfeature :
-                    if "város" in step_desc or "city" in step_desc :
+                    if CITY_KEYWORDS[lang] in step_desc :
                         carcfeature = CarcFeature.CITY
-                    elif "út" in step_desc or "road" in step_desc :
+                    elif ROAD_KEYWORDS[lang] in step_desc :
                         carcfeature = CarcFeature.ROAD
-                    elif "kolostor" in step_desc or "monastery" in step_desc :
+                    elif MONASTERY_KEYWORDS[lang] in step_desc :
                         carcfeature = CarcFeature.MONASTERY
-                    elif "mező" in step_desc or "field" in step_desc :
+                    elif FIELD_KEYWORDS[lang] in step_desc :
                         carcfeature = CarcFeature.ROAD
 
             carctile = CarcTile.VOID
