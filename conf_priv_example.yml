@@ -2,8 +2,8 @@
   paths:
     chrome_path: C:\...\chrome.exe
     db_path: D:\...\bga.db
-    input_dir: D:\output\
-    output_dir: D:\input\
+    input_dir: D:\input\
+    output_dir: D:\output\
   bga_login:
     user: your_username
     password: your_password

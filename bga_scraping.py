@@ -1711,7 +1711,7 @@ def tableproc( table_code, # id of the table
                     if ((index == 0 and carcstep.turnplayer == 2) or (index == 1 and (carcstep.turnplayer == 1 or carcstep.turn == lastturn)) ) and prevclock1 != "":
                         carcstep.clock1 = prevclock1
                 if carcstep.clock2 == "" and not carcstep.turn in turnswithclock2:
-                    if ((index == 0 and carcstep.turnplayer == 1) or (index == 1 and carcstep.turnplayer == 2)) and prevclock2 != "":
+                    if ((index == 0 and carcstep.turnplayer == 1) or (index == 1 and (carcstep.turnplayer == 2 or carcstep.turn == lastturn)) ) and prevclock2 != "":
                         carcstep.clock2 = prevclock2
 
                 prevclock1 = carcstep.clock1
