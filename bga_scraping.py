@@ -535,6 +535,7 @@ def elo_hist( game_def,     # id or name of the game,
 
     gameStatsLoadTotalTime = 0
     gameStatsProcTotalTime = 0
+    tableSeq = 0
 
     start_millisec = int(time.time() * 1000)
 
@@ -549,6 +550,7 @@ def elo_hist( game_def,     # id or name of the game,
         else :
             player_file = ""
             
+        print(player_file)
         output_dir = PATHS['output_dir']
         if player_file != "" and output_dir != "" :
             if os.path.isdir(output_dir):
@@ -624,7 +626,7 @@ def elo_hist( game_def,     # id or name of the game,
                 except TimeoutException:
                     time.sleep(1)
                     trycount += 1
-                    if trycount == 3:
+                    if trycount == 5:
                         print("Cannot load gamestat page.")
                         exit_program()            
 
@@ -864,7 +866,7 @@ def elo_hist( game_def,     # id or name of the game,
 
         file_opened = False
         if player_file != "":
-            f = open(player_file, "w")
+            f = open(player_file, "w", encoding="utf-8")
             file_opened = True
 
             f.write("Player: " + player_name + "\n")
@@ -1658,7 +1660,11 @@ def tableproc( table_code, # id of the table
 
          
         print(f"No. of steps: {len(carcsteps)}")
-        if len(carcsteps) == 0 :
+        print(f"Move number: {move_number}")
+        print(f"Player2 out of time: {tableplayerObj2.outoftime}")
+        print(f"Player1 score: {tableplayerObj1.score}")
+        
+        if len(carcsteps) == 0 and move_number < 2 :
             print("Gamelog not available...")
             exit_program()            
             #return          
