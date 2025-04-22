@@ -918,8 +918,9 @@ def elo_hist( game_def,     # id or name of the game,
         print()
 
     end_millisec = int(time.time() * 1000)
-    print("Average load time per game:    " + str('{0:.2f}'.format(gameStatsLoadTotalTime / tableSeq)) + " ms")
-    print("Average process time per game: " + str('{0:.2f}'.format(gameStatsProcTotalTime / tableSeq)) + " ms")
+    if (tableSeq > 0) :
+        print("Average load time per game:    " + str('{0:.2f}'.format(gameStatsLoadTotalTime / tableSeq)) + " ms")
+        print("Average process time per game: " + str('{0:.2f}'.format(gameStatsProcTotalTime / tableSeq)) + " ms")
     print("Complete runtime: " + str(end_millisec - start_millisec) + " ms")
     
     time.sleep(1)
