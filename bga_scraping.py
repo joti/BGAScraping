@@ -199,6 +199,7 @@ def login24():
 def login():
     global loggedIn
     global lang
+    global othlang
     
     if loggedIn :
         return        
@@ -210,8 +211,8 @@ def login():
     username = BGA_LOGIN['user']
     pw = BGA_LOGIN['password']
 
-    WAIT.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[2]/div/input')))
-    it_username = DRIVER.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[2]/div/input')
+    WAIT.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[2]/div/div/input')))
+    it_username = DRIVER.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[2]/div/div/input')
 
     it_username.send_keys(username)
     time.sleep(2)
@@ -240,6 +241,7 @@ def login():
     print(forumlink.text)
     if forumlink.text.upper() == 'FORUMS' :
         lang = "en"
+        othlang = "hu"
     print(lang)
 
 def init_db():
@@ -464,6 +466,7 @@ def elo_hist( game_def,     # id or name of the game,
             ):
 
     global lang
+    global othlang
 
     ROW_LIMIT = 200
 
@@ -600,6 +603,7 @@ def elo_hist( game_def,     # id or name of the game,
         tableIdSet = {}
         tableList = []
         endTst = None
+        lastELO = 0
         dateFormat = "%Y.%m.%d"
         
         while needSearch :
@@ -728,7 +732,7 @@ def elo_hist( game_def,     # id or name of the game,
                 # 2nd column, 1st div: end time
                 gameEnd = gamerow.find_element(by=By.XPATH, value =".//td[2]/div[1]").text
 
-                # 4th column, 2nd div, 1st div, 2nd span: nem ELO value (class: gamerank_value)
+                # 4th column, 2nd div, 1st div, 2nd span: new ELO value (class: gamerank_value)
                 try:
                     #newELOStr = gamerow.find_element(by=By.XPATH, value=".//td[4]/div[2]/div[1]/span[@class='gamerank_value ']").text
                     newELOStr = gamerow.find_element(by=By.CLASS_NAME, value="gamerank_value ").text
@@ -738,6 +742,8 @@ def elo_hist( game_def,     # id or name of the game,
                     newELO = 0    
                 else:
                     newELO = int(newELOStr)
+                    if lastELO == 0 :
+                        lastELO = newELO
 
                 # examples of game end values:
                 # 2024-09-24 at 22:51           2024.09.24 22:51
@@ -901,6 +907,7 @@ def elo_hist( game_def,     # id or name of the game,
             if "avg" in subfunc_set :
                 f.write("Average ELO: " + str('{0:.2f}'.format(avgELO)) + "\n")
             f.write("Highest ELO: " + str(maxELO) + " (" + maxELODate + ")\n")
+            f.write("Final ELO: " + str(lastELO) + " \n")
             f.write("\n")
 
         print()
@@ -1188,6 +1195,7 @@ def tableproc( table_code, # id of the table
              ):
 
     global lang
+    global othlang
 
     if len(table_code) < 8 :
         print("Wrong table id: " + table_code)
@@ -1587,6 +1595,10 @@ def tableproc( table_code, # id of the table
             "hu": "kolostor",
             "en": "monastery"
         }
+        ABBEY_KEYWORDS = {
+            "hu": "kolostor",
+            "en": "abbey"
+        }
         FIELD_KEYWORDS = {
             "hu": "mező",
             "en": "field"
@@ -1737,15 +1749,16 @@ def tableproc( table_code, # id of the table
 
                 if not keepfeature :
                     carcfeature = CarcFeature.VOID
+                    # BGA fordítási hiba miatt keressük a másik nyelvű szöveget is
                     if needfeature :
-                        if CITY_KEYWORDS[lang] in step_desc :
+                        if CITY_KEYWORDS[lang] in step_desc or CITY_KEYWORDS[othlang] in step_desc :
                             carcfeature = CarcFeature.CITY
-                        elif ROAD_KEYWORDS[lang] in step_desc :
+                        elif ROAD_KEYWORDS[lang] in step_desc or ROAD_KEYWORDS[othlang] in step_desc :
                             carcfeature = CarcFeature.ROAD
-                        elif MONASTERY_KEYWORDS[lang] in step_desc :
+                        elif MONASTERY_KEYWORDS[lang] in step_desc or ABBEY_KEYWORDS[lang] in step_desc or MONASTERY_KEYWORDS[othlang] in step_desc or ABBEY_KEYWORDS[othlang] in step_desc:
                             carcfeature = CarcFeature.MONASTERY
-                        elif FIELD_KEYWORDS[lang] in step_desc :
-                            carcfeature = CarcFeature.ROAD
+                        elif FIELD_KEYWORDS[lang] in step_desc or FIELD_KEYWORDS[othlang] in step_desc :
+                            carcfeature = CarcFeature.FIELD
 
                 carctile = CarcTile.VOID
                 if needtile :
@@ -1790,7 +1803,7 @@ def tableproc( table_code, # id of the table
            
         carcevent = CarcEvent.START
         carcstepObj = CarcStep(table_code=table_code, seq=1, turn=1, bgamove=1, turnplayer=start_player_pos, stepplayer=start_player_pos,
-                               event=carcevent, feature=carcfeature, tile=carctile, score=0, desc="", time=starttimeinfo, clock1=startclock, clock2=startclock)
+                               event=carcevent, feature=CarcFeature.VOID, tile=CarcTile.VOID, score=0, desc="", time=starttimeinfo, clock1=startclock, clock2=startclock)
         carcsteps.append(carcstepObj)
 
         if tableplayerObj2.outoftime and tableplayerObj1.score == 1 and not conceded :
@@ -1967,6 +1980,7 @@ def tableproc( table_code, # id of the table
 loggedIn = False
 popupClosed = False
 lang = "hu"
+othlang = "en"
 
 # 1st param.: function to call
 argnum = len(sys.argv)
