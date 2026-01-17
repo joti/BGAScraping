@@ -5,6 +5,9 @@ conf_priv.yml
 results/
 *.elo
 
+## Ignoring Google service account private key
+gspread-service-account.json
+
 ## Ignoring database files
 db/
 

@@ -169,7 +169,8 @@ def close_popup():
     mainpage_link = BGA_DATA['urls']['main']
     DRIVER.get(mainpage_link)
     try:
-        popup = WAIT.until(EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'cc-window')]//a[contains(@class, 'cc-btn')]")))
+        # popup = WAIT.until(EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'cc-window')]//a[contains(@class, 'cc-btn')]")))
+        popup = WAIT.until(EC.element_to_be_clickable((By.ID, "didomi-notice-agree-button")))
         popup.click()
         print("Popup closed")
     except TimeoutException:
@@ -1159,6 +1160,9 @@ def tablelistproc( tables_file, # name of the input file containing table ids
             connection = get_connection()
 
             for table_code in table_codes:
+                print("table_code")
+                print(table_code)
+                print(table_code.startswith("##"))
                 if table_code.startswith("##") :
                     trn_code = table_code[2:].strip()
                     print(f"Tournament code: {trn_code}")
