@@ -28,8 +28,10 @@
       main: https://www.boardgamearena.com
       login: https://www.boardgamearena.com/account
       community: https://www.boardgamearena.com/community
+      profile: https://boardgamearena.com/player?id={p1}
       gamestats: https://www.boardgamearena.com/gamestats?player={p1}&game_id={p2}
       gamestatsfull: https://www.boardgamearena.com/gamestats?player={p1}&game_id={p2}&opponent_id={p3}&end_date={p4}&finished=0
+      gamestatsfull2: https://www.boardgamearena.com/gamestats?player={p1}&game_id={p2}&opponent_id={p3}&start_date={p4}&end_date={p5}&finished=0
       tournament: https://boardgamearena.com/tournament?id={p1}
       table: https://boardgamearena.com/table?table={p1}&nr
       gamereview: https://boardgamearena.com/gamereview?table={p1}

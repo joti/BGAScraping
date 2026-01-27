@@ -10,15 +10,12 @@ with open(PRIVCONFIG_FILE, 'r') as f:
     config = yaml.safe_load(f)
     BGA_LOGIN = config['bga_login']
     PATHS = config['paths']
+    GOOGLE = config.get('google') # None if missing
 
 PUBCONFIG_FILE = r'conf_pub.yml'
 with open(PUBCONFIG_FILE, 'r') as f:
     config = yaml.safe_load(f)
     BGA_DATA = config['bga_data']
-
-output_dir = PATHS['output_dir']
-input_dir = PATHS['input_dir']
-db_path = PATHS['db_path']
 
 def create_driver( headless = False, 
                    no_sandbox = False ):
@@ -38,3 +35,15 @@ def create_driver( headless = False,
     wait = WebDriverWait(driver, 15)
 
     return driver, wait
+
+
+
+
+
+
+
+
+
+
+
+
