@@ -19,4 +19,5 @@ __pycache__/
 ## Others
 notes/
 temp/
+logs/
 *.bak

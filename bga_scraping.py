@@ -10,6 +10,7 @@ import sqlite3
 import gspread
 import sheet_utils
 
+from pathlib import Path
 from config import PATHS, BGA_LOGIN, BGA_DATA, create_driver
 from datetime import datetime, timedelta
 from dataclasses import dataclass
@@ -247,11 +248,11 @@ def login():
     print("login successful")
 
     forumlink = DRIVER.find_element(By.XPATH, "//a[contains(@href, 'forum')]")
-    print(forumlink.text)
     if forumlink.text.upper() == 'FORUMS' :
         lang = "en"
         othlang = "hu"
-    print(lang)
+    print("Language: " + lang)
+    print(" ")
 
 def init_db():
 
@@ -468,11 +469,9 @@ def get_connection():
 
 def get_profilepic( player : PlayerELO ):
 
-    print(f"Getting avatar for {player.bga_name}")
-    
     profile_url = (BGA_DATA['urls']['profile'].
                      replace('{p1}', player.bga_id))
-    print(profile_url)
+    print(f"Avatar from {profile_url}:")
 
     DRIVER.get(profile_url)
 
@@ -516,6 +515,7 @@ def elo_hist( game_def,     # id or name of the game,
 
     if max_date != "":
         maxDateStr = max_date.replace("-", ".")
+        print("Max date: " + maxDateStr)        
         try:
             maxDateDT = datetime.strptime(maxDateStr, '%Y.%m.%d')
         except ValueError as e:
@@ -529,11 +529,9 @@ def elo_hist( game_def,     # id or name of the game,
         maxTstDT = datetime(int(maxDateStr[0:4]), int(maxDateStr[5:7]), int(maxDateStr[8:10]), 12, 0)
         maxTst = datetime.timestamp(maxTstDT)
 
-    print("maxDate = " + maxDateStr + "    maxTst = " + str(maxTst))        
-
     if min_date != "":
         minDateStr = min_date.replace("-", ".").rstrip(".")
-        print("minDateStr = " + minDateStr)        
+        print("Min date: " + minDateStr)        
         try:
             minDateDTDef = datetime.strptime(minDateStr, '%Y.%m.%d')
         except ValueError as e:
@@ -542,8 +540,6 @@ def elo_hist( game_def,     # id or name of the game,
             
         minTstDT = datetime(int(minDateStr[0:4]), int(minDateStr[5:7]), int(minDateStr[8:10]), 0, 0)
         minTst = datetime.timestamp(minTstDT)
-
-    print("minDate = " + minDateStr + "    minTst = " + str(minTst))        
 
     game_name = 'unknown'
     game_id = '0'
@@ -560,7 +556,7 @@ def elo_hist( game_def,     # id or name of the game,
         print("Unknown game")
         exit_program()
         
-    print(game_id + " - " + game_name)
+    print("Game: " + game_name)
         
     if len(players) == 0:
         player_name = BGA_LOGIN['user']
@@ -586,13 +582,14 @@ def elo_hist( game_def,     # id or name of the game,
         if player.skip:
             continue
 
+        player_name = player.bga_name
+        player.status = 2
+        print(f"Player: {player_name} - {datetime.now().isoformat(sep=' ', timespec='milliseconds')}")
+
         if "sheetproc" in subfunc_set:
             get_profilepic(player)
         
         playerRowLimit = 200
-        player_name = player.bga_name
-        player.status = 2
-        print('ELO progress of %s in the game %s:' % (player_name, game_name))
 
         if file_name == ".":
             player_file = (player_name + "__" + game_name).lower().replace(" ", "_") + ".elo"
@@ -601,7 +598,6 @@ def elo_hist( game_def,     # id or name of the game,
         else :
             player_file = ""
             
-        print(player_file)
         output_dir = PATHS['output_dir']
         if player_file != "" and output_dir != "" :
             if os.path.isdir(output_dir):
@@ -610,14 +606,11 @@ def elo_hist( game_def,     # id or name of the game,
                 print(output_dir + " does not exist")
         if player_file != "" :
             print("Output file: " + player_file)
-        print()
 
         if not player.last_table_date:
             minDateDT = minDateDTDef
         else:
-            print("player.last_table_date: " + player.last_table_date)
             minDateStr = player.last_table_date.replace("-", ".").rstrip(".")
-            print(minDateStr)
             try:
                 minDateDT = datetime.strptime(minDateStr, '%Y.%m.%d')
             except ValueError as e:
@@ -655,16 +648,13 @@ def elo_hist( game_def,     # id or name of the game,
 
             player.bga_id = player_url[(player_url.find('='))+1:]
 
-        print("Player id is: " + player.bga_id)
-
         startDT = datetime.now()
-        print("Start date: " + str(startDT))    
+        print("Gamestats start: " + startDT.isoformat(sep=' ', timespec='milliseconds'))    
 
         if maxDateDT != datetime.max :
             current_date = maxDateDT + timedelta(days=1)
         else :   
             current_date = startDT + timedelta(days=1)
-        print("Current date: " + str(current_date))    
 
         if minDateDT != datetime.min :
             filter_mindate = minDateDT + timedelta(days=-1)
@@ -731,15 +721,15 @@ def elo_hist( game_def,     # id or name of the game,
             #print("Gamestats page loaded.")
 
             rownum = len(DRIVER.find_elements(by=By.XPATH, value="//table[@id='gamelist_inner']/tr"))
-            time.sleep(0.5)
 
             trycount = 0
             trycause = ""
 
             if rownum < 10 :
                 needSearch = False
-                time.sleep(0.1)
             else :    
+                time.sleep(0.5)
+
                 # pressing "more tables" until the number of games doesn't increase any more or the number of rows reaches 100
                 while trycount < 4:
                     prev_rownum = rownum
@@ -792,7 +782,8 @@ def elo_hist( game_def,     # id or name of the game,
                         needSearch = True
                         break
             
-            rownum=len(DRIVER.find_elements(by=By.XPATH, value="//table[@id='gamelist_inner']/tr"))
+                rownum=len(DRIVER.find_elements(by=By.XPATH, value="//table[@id='gamelist_inner']/tr"))
+                
             print(str(rownum) + " games found")
             millisec2 = int(time.time() * 1000)
             gameStatsLoadTotalTime += (millisec2 - millisec1)
@@ -918,7 +909,6 @@ def elo_hist( game_def,     # id or name of the game,
                 current_date = current_date + timedelta(days=1)
 
 
-            print(str(tableNum) + " games total")
             millisec2 = int(time.time() * 1000)
             gameStatsProcTotalTime += (millisec2 - millisec1)
 
@@ -931,6 +921,7 @@ def elo_hist( game_def,     # id or name of the game,
         dayRecSeqs = set()
         prevDate = ""
         rankedNum = 0
+        newRec = True
 
         for tableObj in tableList:
             if tableObj.endDate != prevDate :
@@ -989,10 +980,12 @@ def elo_hist( game_def,     # id or name of the game,
                 player.active = False    
             
             player.last_table_id = lastTable
+            newRec = False 
             if not player.top_elo or int(player.top_elo) < maxELO:  
                 player.top_elo = str(maxELO)
                 player.top_elo_table_id = maxELOTable
                 player.top_elo_date = maxELODate
+                newRec = True
                 if not player.top_elo_date.endswith("."):
                     player.top_elo_date += "."
             player.status = 1    
@@ -1013,14 +1006,17 @@ def elo_hist( game_def,     # id or name of the game,
             f.write("Examination finished at " + startDT.strftime("%Y.%m.%d %H:%M:%S") + "\n")
             f.write("\n")
 
-        print()
         if maxDateDT != datetime.max or minDateDT != datetime.min :
+            if tableNum > rankedNum:
+                print("Number of games within the period: " + str(tableNum))
             print("Number of ranked games within the period: " + str(rankedNum))
-            print("Personal ELO record of " + player_name + " within the period:")
+            if newRec :
+                print("Personal ELO record of " + player_name + " within the period:")
         else :    
+            print("Number of games: " + str(tableNum))
             print("Number of ranked games: " + str(rankedNum))
             print("Personal ELO record of " + player_name + ":")
-        print(maxELODate + ": " + str(maxELO))
+            print(maxELODate + ": " + str(maxELO))
         if "avg" in subfunc_set :
             print("Average ELO: " + str('{0:.2f}'.format(avgELO)))
 
@@ -1032,25 +1028,27 @@ def elo_hist( game_def,     # id or name of the game,
             f.write("Final ELO: " + str(lastELO) + " \n")
             f.write("\n")
 
-        print()
-        print("Days when " + player_name + " reached new personal ELO record:")
+        if newRec :
+            print()
+            print("Days when " + player_name + " reached new personal ELO record:")
 
-        if file_opened :
-            f.write("ELO progress:\n")
-            f.write("\n")
-        
-        for tableObj in tableList:
-            if tableObj.newRecByDay :
-                endMark = " *" if tableObj.fake else ""
-                    
-                print(tableObj.endDate + ": " + str(tableObj.newELO) + endMark)
-                if file_opened:
-                    f.write(tableObj.endDate + ": " + str(tableObj.newELO) + endMark + "\n")
+            if file_opened :
+                f.write("ELO progress:\n")
+                f.write("\n")
+            
+            for tableObj in tableList:
+                if tableObj.newRecByDay :
+                    endMark = " *" if tableObj.fake else ""
+                        
+                    print(tableObj.endDate + ": " + str(tableObj.newELO) + endMark)
+                    if file_opened:
+                        f.write(tableObj.endDate + ": " + str(tableObj.newELO) + endMark + "\n")
 
         if file_opened:
             f.close()
         print()
 
+    end_millisec = int(time.time() * 1000)
 
     if "sheetproc" in subfunc_set :
         writesheet = True
@@ -1070,10 +1068,14 @@ def elo_hist( game_def,     # id or name of the game,
             sheet_utils.write_bga_elo(players)
         sheet_utils.write_meta_last_run(writesheet, errorStr)    
 
+    if len(players) == 1:
+        if tableSeq > 0:
+            print("Average load time per game:    " + str('{0:.2f}'.format(gameStatsLoadTotalTime / tableSeq)) + " ms")
+            print("Average process time per game: " + str('{0:.2f}'.format(gameStatsProcTotalTime / tableSeq)) + " ms")
+    else:
+        print("Average process time per player: " + str('{0:.2f}'.format((end_millisec - start_millisec) / len(players) )) + " ms")
+
     end_millisec = int(time.time() * 1000)
-    if (tableSeq > 0) and len(players) == 1:
-        print("Average load time per game:    " + str('{0:.2f}'.format(gameStatsLoadTotalTime / tableSeq)) + " ms")
-        print("Average process time per game: " + str('{0:.2f}'.format(gameStatsProcTotalTime / tableSeq)) + " ms")
     print("Complete runtime: " + str(end_millisec - start_millisec) + " ms")
     
     time.sleep(1)
@@ -2149,6 +2151,21 @@ subfunc_set = set()
 headless = False
 no_sandbox = False
 
+LOG_DIR = PATHS.get("log_dir")
+if LOG_DIR:
+    LOG_DIR = Path(LOG_DIR)
+    LOG_DIR.mkdir(parents = True, exist_ok = True)
+
+    logfile_name = LOG_DIR / f"{func}_{datetime.now():%Y-%m-%d}.log"
+    logfile = open(logfile_name, "a", encoding="utf-8", buffering=1)
+
+    sys.stdout = logfile
+    sys.stderr = logfile
+
+    print("="*80)
+    print(f"START: {datetime.now().isoformat(sep=' ', timespec='seconds')}")
+    print(" ")
+    
 if argnum > 2 :
     for argpos in range(2, argnum):
         if argpos == argnum - 1 and sys.argv[argpos][:2] != '--':
@@ -2196,8 +2213,6 @@ if argnum > 2 :
 
 DRIVER, WAIT = create_driver(headless=headless, no_sandbox=no_sandbox)                
 
-print("game: " + game_def + ", player: " + player_names + ", file: " + file_name)            
-
 if "sheetproc" in subfunc_set:
     players = sheet_utils.read_players()
     link_icon = sheet_utils.read_meta_value("bga_link_icon")
@@ -2207,6 +2222,7 @@ if "sheetproc" in subfunc_set:
             p.linkicon = link_icon
             
 else:
+    print("game: " + game_def + ", player: " + player_names + ", file: " + file_name)            
     players: List[PlayerELO] = []
     for player_name in player_names.split(","):
         player_name = player_name.strip()
@@ -2233,4 +2249,8 @@ match func :
     case _:
         print("unknown function")
     
+if LOG_DIR:
+    print(" ")
+    print(f"END: {datetime.now().isoformat(sep=' ', timespec='seconds')}")
+    print(" ")
  
