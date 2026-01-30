@@ -169,6 +169,15 @@ def exit_program():
     print("Exiting...")
     sys.exit(0)
 
+def restart_driver():
+    global DRIVER, WAIT
+    try:
+        DRIVER.quit()
+    except Exception:
+        pass
+    time.sleep(2)
+    DRIVER, WAIT = create_driver(headless=headless, no_sandbox=no_sandbox)
+
 def close_popup():
     global popupClosed
     if popupClosed :
@@ -239,10 +248,18 @@ def login():
     WAIT.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[2]/div/form/div[2]/div/div/a')))
     DRIVER.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[2]/div/form/div[2]/div/div/a').click()
 
-    time.sleep(1)
+    time.sleep(2)
 
-    WAIT.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[3]/div[2]/div[3]/div[3]/div/div/a')))
-    DRIVER.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[3]/div[2]/div[3]/div[3]/div/div/a').click()
+    # "Let's play" button
+    try:
+        btn = WAIT.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#account-module .bga-registration-form__letsplay_button a")))
+        btn.click()
+    except Exception:
+        print("CSS_SELECTOR NOK")
+        btn = WAIT.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[3]/div[2]/div[3]/div[3]/div/div/a')))
+        btn.click()
+        print("XPATH OK")
+    
     time.sleep(1)
     loggedIn = True
     print("login successful")
@@ -253,6 +270,24 @@ def login():
         othlang = "hu"
     print("Language: " + lang)
     print(" ")
+
+def login_with_retry( max_attempts = 3 ):
+    global DRIVER, WAIT, loggedIn
+
+    last_exc = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            print(f"Login attempt {attempt}/{max_attempts}")
+            loggedIn = False
+            login()
+            return
+        except Exception as e:
+            last_exc = e
+            print(f"Login FAILED: {repr(e)}")
+            restart_driver()
+            time.sleep(5)
+
+    raise last_exc
 
 def init_db():
 
@@ -466,6 +501,7 @@ def get_connection():
 
     print("Database file: " + db_path)
     return sqlite3.connect(db_path)
+    
 
 def get_profilepic( player : PlayerELO ):
 
@@ -493,6 +529,7 @@ def elo_hist( game_def,     # id or name of the game,
               min_date,     # start of the period to check (no limit if empty)
               max_date,     # end of the period to check (no limit if empty)
               file_name,    # name of file to export data
+              update_profilepic # profile picture update
             ):
 
     global lang
@@ -569,7 +606,7 @@ def elo_hist( game_def,     # id or name of the game,
 
     # we need the player's id in BGA
     # to get the community page we need to log in
-    login()
+    login_with_retry()
     time.sleep(1)
 
     gameStatsLoadTotalTime = 0
@@ -586,7 +623,7 @@ def elo_hist( game_def,     # id or name of the game,
         player.status = 2
         print(f"Player: {player_name} - {datetime.now().isoformat(sep=' ', timespec='milliseconds')}")
 
-        if "sheetproc" in subfunc_set:
+        if update_profilepic:
             get_profilepic(player)
         
         playerRowLimit = 200
@@ -701,22 +738,24 @@ def elo_hist( game_def,     # id or name of the game,
             success = False
             while not success:
                 try:
-                    if trycount == 0:
-                        DRIVER.get(gamestats_url)
-                    else:    
-                        DRIVER.refresh()
-                        print("refresh")
+                    DRIVER.get(gamestats_url)
                     WAIT.until(EC.visibility_of_element_located((By.XPATH, "//table[@id='gamelist_inner']")))
                     success = True
                 except TimeoutException:
                     time.sleep(1)
                     trycount += 1
-                    if trycount == 5:
-                        errorStr = "Cannot load gamestat page for " + player_name
-                        print(errorStr)
-                        if "sheetproc" in subfunc_set:
-                            sheet_utils.write_meta_last_run(False, errorStr) 
-                        exit_program()            
+                except WebDriverException as e:
+                    print(f"WebDriverException during gamestats load: {e}")
+                    trycount += 1
+                    restart_driver()
+                    time.sleep(3)
+        
+                if trycount == 5:
+                    errorStr = "Cannot load gamestat page for " + player_name
+                    print(errorStr)
+                    if "sheetproc" in subfunc_set:
+                        sheet_utils.write_meta_last_run(False, errorStr) 
+                    exit_program()            
 
             #print("Gamestats page loaded.")
 
@@ -2150,6 +2189,7 @@ trn_name = ""
 subfunc_set = set()
 headless = False
 no_sandbox = False
+update_profilepic = False
 
 LOG_DIR = PATHS.get("log_dir")
 if LOG_DIR:
@@ -2210,45 +2250,55 @@ if argnum > 2 :
                 headless = True
             case "--no-sandbox":
                 no_sandbox = True
+            case "--profilepic":
+                update_profilepic = True
 
-DRIVER, WAIT = create_driver(headless=headless, no_sandbox=no_sandbox)                
+try:
+    DRIVER, WAIT = create_driver(headless=headless, no_sandbox=no_sandbox)                
 
-if "sheetproc" in subfunc_set:
-    players = sheet_utils.read_players()
-    link_icon = sheet_utils.read_meta_value("bga_link_icon")
-    if link_icon:
-        print(f"Link icon: {link_icon}")
-        for p in players:
-            p.linkicon = link_icon
-            
-else:
-    print("game: " + game_def + ", player: " + player_names + ", file: " + file_name)            
-    players: List[PlayerELO] = []
-    for player_name in player_names.split(","):
-        player_name = player_name.strip()
-        players.append(PlayerELO(
-            bga_name = player_name
-        ))    
-print(f"no of players: {len(players)}")
+    if "sheetproc" in subfunc_set:
+        players = sheet_utils.read_players()
+        link_icon = sheet_utils.read_meta_value("bga_link_icon")
+        if link_icon:
+            print(f"Link icon: {link_icon}")
+            for p in players:
+                p.linkicon = link_icon
+                
+    else:
+        print("game: " + game_def + ", player: " + player_names + ", file: " + file_name)            
+        players: List[PlayerELO] = []
+        for player_name in player_names.split(","):
+            player_name = player_name.strip()
+            players.append(PlayerELO(
+                bga_name = player_name
+            ))    
+    print(f"no of players: {len(players)}")
 
-match func :
-    case "elo_hist":
-        elo_hist(game_def, players, min_date, max_date, file_name)
-    case "login":    
-        login()
-    case "init_db":    
-        init_db()
-    case "trn_tablelistcoll":
-        trn_tablelistcoll(file_name, outputfile_name)
-    case "trn_tablecoll":
-        trn_tablecoll(trn_id, file_name)
-    case "carc_tablelistproc":
-        tablelistproc(file_name, output_dir)
-    case "carc_tableproc":
-        tableproc(table_id, output_dir, trn_code=trn_code, trn_name=trn_name)
-    case _:
-        print("unknown function")
-    
+    match func :
+        case "elo_hist":
+            elo_hist(game_def, players, min_date, max_date, file_name, update_profilepic)
+        case "login":    
+            login()
+        case "init_db":    
+            init_db()
+        case "trn_tablelistcoll":
+            trn_tablelistcoll(file_name, outputfile_name)
+        case "trn_tablecoll":
+            trn_tablecoll(trn_id, file_name)
+        case "carc_tablelistproc":
+            tablelistproc(file_name, output_dir)
+        case "carc_tableproc":
+            tableproc(table_id, output_dir, trn_code=trn_code, trn_name=trn_name)
+        case _:
+            print("unknown function")
+
+finally:
+    if DRIVER is not None:
+        try:
+            DRIVER.quit()
+        except Exception:
+            pass
+        
 if LOG_DIR:
     print(" ")
     print(f"END: {datetime.now().isoformat(sep=' ', timespec='seconds')}")
