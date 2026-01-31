@@ -178,22 +178,34 @@ def restart_driver():
     time.sleep(2)
     DRIVER, WAIT = create_driver(headless=headless, no_sandbox=no_sandbox)
 
-def close_popup():
-    global popupClosed
-    if popupClosed :
-        return        
-
+def close_popup( max_attempts = 3 ): 
+    global popupClosed 
+    if popupClosed: 
+        return 
+        
     # We open the main page just to dismiss popups if there's any
-    mainpage_link = BGA_DATA['urls']['main']
-    DRIVER.get(mainpage_link)
-    try:
-        # popup = WAIT.until(EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'cc-window')]//a[contains(@class, 'cc-btn')]")))
-        popup = WAIT.until(EC.element_to_be_clickable((By.ID, "didomi-notice-agree-button")))
-        popup.click()
-        print("Popup closed")
-    except TimeoutException:
-        print("No clickable popup found")
-    popupClosed = True    
+    mainpage_link = BGA_DATA['urls']['main'] 
+    last_exc = None 
+    
+    for attempt in range(1, max_attempts + 1): 
+        try: 
+            DRIVER.get(mainpage_link) 
+            popup = WAIT.until(EC.element_to_be_clickable((By.ID, "didomi-notice-agree-button"))) 
+            popup.click() 
+            print("Popup closed") 
+            popupClosed = True 
+            return 
+        except TimeoutException: 
+            print("No clickable popup found") 
+            popupClosed = True 
+            return 
+        except Exception as e: 
+            last_exc = e 
+            print(f"Popup closing FAILED: {repr(e)}") 
+            restart_driver() 
+            time.sleep(5) 
+            
+    raise last_exc
 
 def login24():
     # Deprecated login method
