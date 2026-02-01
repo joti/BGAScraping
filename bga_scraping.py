@@ -22,6 +22,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import WebDriverException
 from google.oauth2.service_account import Credentials
 from models import PlayerELO
 
