@@ -23,6 +23,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import WebDriverException
+from urllib3.exceptions import ReadTimeoutError
 from google.oauth2.service_account import Credentials
 from models import PlayerELO
 
@@ -249,8 +250,15 @@ def login():
     it_username.send_keys(username)
     time.sleep(2)
 
-    WAIT.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[3]/div/a')))
-    DRIVER.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[3]/div/a').click()
+    btn = None
+    for element in DRIVER.find_elements(By.XPATH, '//*[@id="account-module"]//form//a'):
+        if element.is_displayed():
+            btn = element
+            break
+    if btn:
+        btn.click()
+    else:
+        raise NoSuchElementException("No visible button found to submit username")
     time.sleep(1)
 
     WAIT.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[2]/div/form/div[1]/div[2]/div/input')))
@@ -258,9 +266,15 @@ def login():
     it_password.send_keys(pw)
     time.sleep(2)
 
-    WAIT.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[2]/div/form/div[2]/div/div/a')))
-    DRIVER.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[2]/div/form/div[2]/div/div/a').click()
-
+    btn = None
+    for element in DRIVER.find_elements(By.XPATH, '//*[@id="account-module"]//form//a'):
+        if element.is_displayed():
+            btn = element
+            break
+    if btn:
+        btn.click()
+    else:
+        raise NoSuchElementException("No visible button found to submit password")
     time.sleep(2)
 
     # "Let's play" button
@@ -757,8 +771,8 @@ def elo_hist( game_def,     # id or name of the game,
                 except TimeoutException:
                     time.sleep(1)
                     trycount += 1
-                except WebDriverException as e:
-                    print(f"WebDriverException during gamestats load: {e}")
+                except (WebDriverException, ReadTimeoutError) as e:
+                    print(f"WebDriverException during gamestats load: {repr(e)}")
                     trycount += 1
                     restart_driver()
                     time.sleep(3)
