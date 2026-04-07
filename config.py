@@ -37,8 +37,11 @@ def create_driver( headless = False,
     if no_sandbox:    
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-
+    
     driver = webdriver.Chrome(service=service, options=options)
+    driver.set_page_load_timeout(30)
+    driver.set_script_timeout(30)
+
     wait = WebDriverWait(driver, 15)
 
     return driver, wait

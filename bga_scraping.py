@@ -24,6 +24,8 @@ from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import WebDriverException
 from urllib3.exceptions import ReadTimeoutError
+from urllib3.exceptions import ProtocolError
+from http.client import RemoteDisconnected
 from google.oauth2.service_account import Credentials
 from models import PlayerELO
 
@@ -768,10 +770,13 @@ def elo_hist( game_def,     # id or name of the game,
                     DRIVER.get(gamestats_url)
                     WAIT.until(EC.visibility_of_element_located((By.XPATH, "//table[@id='gamelist_inner']")))
                     success = True
-                except TimeoutException:
-                    time.sleep(1)
+                except (TimeoutException) as e:
+                    print(f"TimeoutException during gamestats load: {repr(e)}")
                     trycount += 1
-                except (WebDriverException, ReadTimeoutError) as e:
+                    if trycount > 1 :
+                        restart_driver()
+                    time.sleep(1)
+                except (WebDriverException, ReadTimeoutError, RemoteDisconnected, ProtocolError, ConnectionResetError, BrokenPipeError) as e:
                     print(f"WebDriverException during gamestats load: {repr(e)}")
                     trycount += 1
                     restart_driver()
@@ -1213,6 +1218,8 @@ def trn_tablelistcoll( trns_file, # name of the input file containing tournament
 
 def trn_tablecoll( trn_id,   # id of the tournament
                    file_name, # name of file to export data
+                   group_id = "", # group of the tournament
+                   stage_id = "", # stage of the tournament
                    trn_code = "", # forced code of the tournament
                    trn_name = "", # forced name of the tournament 
                    output_subdir = "" # subdirectory of the output files
@@ -1220,7 +1227,12 @@ def trn_tablecoll( trn_id,   # id of the tournament
 
     trn_file = ""
     if file_name == ".":
-        trn_file = ("tournament_" + trn_id + ".lst")
+        if group_id :
+            trn_file = ("tournament_" + trn_id + "_g" + group_id + ".lst")
+        elif stage_id :
+            trn_file = ("tournament_" + trn_id + "_s" + stage_id + ".lst")
+        else :    
+            trn_file = ("tournament_" + trn_id + ".lst")
     elif file_name != "":
         trn_file = file_name
     else :
@@ -1245,27 +1257,37 @@ def trn_tablecoll( trn_id,   # id of the tournament
     login()
 
     start_millisec = int(time.time() * 1000)
-    
-    trn_url = (BGA_DATA['urls']['tournament'].
-                             replace('{p1}', trn_id))
+
+    if stage_id :
+        trn_url = (BGA_DATA['urls']['tournamentstage'].
+                                 replace('{p1}', trn_id).
+                                 replace('{p2}', stage_id))
+    elif group_id :
+        trn_url = (BGA_DATA['urls']['tournamentgroup'].
+                                 replace('{p1}', trn_id).
+                                 replace('{p2}', group_id))
+    else :    
+        trn_url = (BGA_DATA['urls']['tournament'].
+                                 replace('{p1}', trn_id))
     print(trn_url)
 
-# div containing all games of the tournament:
+    # div containing all games of the tournament:
 
-# Swiss system:
-# XPath:       //*[@id="stage_display"]/div/div/div[2]
-# Full XPath:  /html/body/div[2]/div[5]/div[1]/div/div/div[4]/div/div/div/div/div[2]
+    # Swiss system:
+    # XPath:       //*[@id="stage_display"]/div/div/div[2]
+    # Full XPath:  /html/body/div[2]/div[5]/div[1]/div/div/div[4]/div/div/div/div/div[2]
 
-# Round-robin (1 stage)
-# XPath:       //*[@id="stage_display"]/div/div/div[2]
-# Full XPath:  /html/body/div[2]/div[5]/div[1]/div/div/div[4]/div/div/div/div/div[2]
+    # Round-robin (1 stage)
+    # XPath:       //*[@id="stage_display"]/div/div/div[2]
+    # Full XPath:  /html/body/div[2]/div[5]/div[1]/div/div/div[4]/div/div/div/div/div[2]
 
-# Round-robin (2 stage):
-# XPath:       //*[@id="stage_display"]/div/div/div/div[2]/div[3]/div[2]
-# Full XPath:  /html/body/div[2]/div[5]/div[1]/div/div/div[4]/div/div/div/div/div/div[2]/div[3]/div[2]
+    # Round-robin (2 stage):
+    # XPath:       //*[@id="stage_display"]/div/div/div/div[2]/div[3]/div[2]
+    # Full XPath:  /html/body/div[2]/div[5]/div[1]/div/div/div[4]/div/div/div/div/div/div[2]/div[3]/div[2]
 
-# class of div containing all games:          v2tournament__encounters
-# class of emelents containing link to games: v2tournament__encounter-title
+    # class of div containing all games:          v2tournament__encounters
+    # class of elements containing link to games: v2tournament__encounter-title
+
 
     trycount = 0
     success = False
@@ -1276,7 +1298,12 @@ def trn_tablecoll( trn_id,   # id of the tournament
             else:    
                 DRIVER.refresh()
                 print("refresh")
-            elements = WAIT.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "v2tournament__encounter-title")))
+            if stage_id :
+                elements = WAIT.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.round-robin-overview__match a.force_reload")))
+            elif group_id :
+                elements = WAIT.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.round-robin-overview__match a.force_reload")))
+            else :     
+                elements = WAIT.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "v2tournament__encounter-title")))
             
             success = True
         except TimeoutException:
@@ -1284,7 +1311,7 @@ def trn_tablecoll( trn_id,   # id of the tournament
             trycount += 1
             if trycount == 3:
                 print("Cannot load tournament page.")
-                exit_program()            
+                exit_program()
 
     print("Tournament page loaded.")
 
@@ -2204,6 +2231,8 @@ else :
 
 table_id = ""
 trn_id = ""
+group_id = ""
+stage_id = ""
 game_def = ""
 player_names = ""
 file_name = ""
@@ -2259,8 +2288,12 @@ if argnum > 2 :
                 max_date = sys.argv[argpos + 1]
             case "-tc":
                 trn_code = sys.argv[argpos + 1]
+            case "-tg":
+                group_id = sys.argv[argpos + 1]
             case "-tn":
                 trn_name = sys.argv[argpos + 1]
+            case "-ts":
+                stage_id = sys.argv[argpos + 1]
             case "--sheetproc":
                 subfunc_set.add("sheetproc")
             case "--avg":
@@ -2311,7 +2344,7 @@ try:
         case "trn_tablelistcoll":
             trn_tablelistcoll(file_name, outputfile_name)
         case "trn_tablecoll":
-            trn_tablecoll(trn_id, file_name)
+            trn_tablecoll(trn_id, file_name, group_id, stage_id)
         case "carc_tablelistproc":
             tablelistproc(file_name, output_dir)
         case "carc_tableproc":
