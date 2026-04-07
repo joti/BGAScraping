@@ -1152,7 +1152,7 @@ def elo_hist( game_def,     # id or name of the game,
     time.sleep(1)
 
 def trn_tablelistcoll( trns_file, # name of the input file containing tournament ids or links
-                       outputfile_name = "" # concatenated output
+                       outputfile_name = "" # output file
                      ):
 
     filename_noext = "" 
@@ -2236,6 +2236,7 @@ stage_id = ""
 game_def = ""
 player_names = ""
 file_name = ""
+inputfile_name = ""
 outputfile_name = ""
 output_dir = ""
 min_date = ""
@@ -2278,6 +2279,8 @@ if argnum > 2 :
                 player_names = sys.argv[argpos + 1]
             case "-f":
                 file_name = sys.argv[argpos + 1]
+            case "-if":
+                inputfile_name = sys.argv[argpos + 1]
             case "-of":
                 outputfile_name = sys.argv[argpos + 1]
             case "-o":
@@ -2342,7 +2345,7 @@ try:
         case "init_db":    
             init_db()
         case "trn_tablelistcoll":
-            trn_tablelistcoll(file_name, outputfile_name)
+            trn_tablelistcoll(inputfile_name, file_name)
         case "trn_tablecoll":
             trn_tablecoll(trn_id, file_name, group_id, stage_id)
         case "carc_tablelistproc":
