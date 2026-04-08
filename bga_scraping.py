@@ -2279,11 +2279,11 @@ if argnum > 2 :
                 player_names = sys.argv[argpos + 1]
             case "-f":
                 file_name = sys.argv[argpos + 1]
-            case "-if":
+            case "-i":
                 inputfile_name = sys.argv[argpos + 1]
-            case "-of":
-                outputfile_name = sys.argv[argpos + 1]
             case "-o":
+                outputfile_name = sys.argv[argpos + 1]
+            case "-od":
                 output_dir = sys.argv[argpos + 1]
             case "-mn":
                 min_date = sys.argv[argpos + 1]
@@ -2319,37 +2319,37 @@ if argnum > 2 :
 try:
     DRIVER, WAIT = create_driver(headless=headless, no_sandbox=no_sandbox)                
 
-    if "sheetproc" in subfunc_set:
-        players = sheet_utils.read_players()
-        link_icon = sheet_utils.read_meta_value("bga_link_icon")
-        if link_icon:
-            print(f"Link icon: {link_icon}")
-            for p in players:
-                p.linkicon = link_icon
-                
-    else:
-        print("game: " + game_def + ", player: " + player_names + ", file: " + file_name)            
-        players: List[PlayerELO] = []
-        for player_name in player_names.split(","):
-            player_name = player_name.strip()
-            players.append(PlayerELO(
-                bga_name = player_name
-            ))    
-    print(f"no of players: {len(players)}")
-
     match func :
         case "elo_hist":
-            elo_hist(game_def, players, min_date, max_date, file_name, update_profilepic)
+            if "sheetproc" in subfunc_set:
+                players = sheet_utils.read_players()
+                link_icon = sheet_utils.read_meta_value("bga_link_icon")
+                if link_icon:
+                    print(f"Link icon: {link_icon}")
+                    for p in players:
+                        p.linkicon = link_icon
+                        
+            else:
+                print("game: " + game_def + ", player: " + player_names + ", file: " + outputfile_name)            
+                players: List[PlayerELO] = []
+                for player_name in player_names.split(","):
+                    player_name = player_name.strip()
+                    players.append(PlayerELO(
+                        bga_name = player_name
+                    ))    
+            print(f"no of players: {len(players)}")
+
+            elo_hist(game_def, players, min_date, max_date, outputfile_name, update_profilepic)
         case "login":    
             login()
         case "init_db":    
             init_db()
         case "trn_tablelistcoll":
-            trn_tablelistcoll(inputfile_name, file_name)
+            trn_tablelistcoll(inputfile_name, outputfile_name)
         case "trn_tablecoll":
-            trn_tablecoll(trn_id, file_name, group_id, stage_id)
+            trn_tablecoll(trn_id, outputfile_name, group_id, stage_id)
         case "carc_tablelistproc":
-            tablelistproc(file_name, output_dir)
+            tablelistproc(inputfile_name, output_dir)
         case "carc_tableproc":
             tableproc(table_id, output_dir, trn_code=trn_code, trn_name=trn_name)
         case _:
