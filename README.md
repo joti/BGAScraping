@@ -25,7 +25,8 @@ The script opens a browser session and logs into BGA using the credentials provi
 
 Run the script from the command line, specifying the desired function as a parameter.
 Call the available functions as described below.<br/>
-**Universal optional flags:**<br/>
+
+Universal optional flags:<br/>
 - `--headless`: Runs Chrome in headless mode (without a visible window).<br/>
 - `--no-sandbox`: Disables Chrome’s security sandbox, which may be required in restricted environments (e.g. certain Linux servers).<br/>
 
@@ -43,13 +44,14 @@ The results can optionally be saved to a file.
 > python bga_scraping.py elo_hist [-g <game_id/game_name>] [-p <player_name>] [-mn <minimum_date>] [-mx <maximum_date>] [-o <file_name>] [--avg]
 ```
 
-**Arguments:**<br/>
+Arguments:<br/>
 - `-g <game_id/game_name>`: ID or name of the game (must be listed in conf_pub.yml); default is Carcassonne.<br/>
 - `-p <player_names>`: BGA usernames of the players, separated by commas; default is the username specified in `conf_priv.yml`.<br/>
 - `-mn <minimum_date>`: Start of a period (YYYY-MM-DD format).<br/>
 - `-mx <maximum_date>`: End of the period (YYYY-MM-DD format).<br/>
 - `-o <file_name>`: Output file name. The default location is defined in `conf_priv.yml`. If `file_name` is a dot (`.`), a default filename will be used: `[player_name]__[game_name].elo`.<br/>
-**Optional flags:**<br/>
+
+Optional flags:<br/>
 - `--avg`: Calculate of the average ELO rating.<br/>
 
 Example:
@@ -87,13 +89,14 @@ These functions collect detailed (turn-by-turn) data from a BGA Carcassonne tabl
 > python bga_scraping.py carc_tablelistproc -i [inputfile_name] [-od output_dir] [--winbyclock] [--skipreview] [--db]
 ```
 
-**Arguments:**<br/>
+Arguments:<br/>
 - `-b table_id`: ID or BGA table (part of the table page URL).<br/>
 - `-i inputfile_name`: Name of the input file containing table IDs.<br/>
 - `-od output_dir`: Name of the output subdirectory under the path defined in `conf_priv.yml`. If set to a dot (.), the input file name will be used.<br/>
 - `-tc tournament_code`: Replace BGA's tournament code with a custom value.<br/>
 - `-tn tournament_name`: Replace BGA's tournament name with a custom value.<br/>
-**Optional flags:**<br/>
+
+Optional flags:<br/>
 - `--winbyclock`: Counts a game as a loss if a player runs out of time, regardless of the final result shown on BGA.<br/>
 - `--skipreview`: Skips the game review page (no turn-by-turn data will be collected).<br/>
 - `--db`: Saves data into an SQLite database defined in `config_priv.yml` (`db_path`).<br/>
