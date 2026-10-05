@@ -743,7 +743,7 @@ def elo_hist( game_def,     # id or name of the game,
             unix_timestamp = datetime.timestamp(current_date)
             end_timestamp = str(int(unix_timestamp))
 
-            if filter_mindate == datetime.min :
+            if filter_mindate == datetime.min or "nominfilter" in subfunc_set :
                 gamestats_url = (BGA_DATA['urls']['gamestatsfull'].
                                  replace('{p1}', player.bga_id).
                                  replace('{p2}', game_id).
@@ -773,7 +773,7 @@ def elo_hist( game_def,     # id or name of the game,
                 except (TimeoutException) as e:
                     print(f"TimeoutException during gamestats load: {repr(e)}")
                     trycount += 1
-                    if trycount > 1 :
+                    if trycount > 3 :
                         restart_driver()
                     time.sleep(1)
                 except (WebDriverException, ReadTimeoutError, RemoteDisconnected, ProtocolError, ConnectionResetError, BrokenPipeError) as e:
@@ -979,6 +979,12 @@ def elo_hist( game_def,     # id or name of the game,
                 tableList.append(tableObj)
                 current_date = current_date + timedelta(days=1)
 
+            if needSearch and rowcount > 0 and skipTable:
+                playerRowLimit = max(playerRowLimit, rowcount) + 30
+                print(
+                    "No new games in this batch; increasing row limit to "
+                    + str(playerRowLimit)
+                )
 
             millisec2 = int(time.time() * 1000)
             gameStatsProcTotalTime += (millisec2 - millisec1)
@@ -1288,7 +1294,6 @@ def trn_tablecoll( trn_id,   # id of the tournament
     # class of div containing all games:          v2tournament__encounters
     # class of elements containing link to games: v2tournament__encounter-title
 
-
     trycount = 0
     success = False
     while not success:
@@ -1298,12 +1303,14 @@ def trn_tablecoll( trn_id,   # id of the tournament
             else:    
                 DRIVER.refresh()
                 print("refresh")
+                
+            time.sleep(10)
             if stage_id :
                 elements = WAIT.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.round-robin-overview__match a.force_reload")))
             elif group_id :
                 elements = WAIT.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.round-robin-overview__match a.force_reload")))
             else :     
-                elements = WAIT.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "v2tournament__encounter-title")))
+                elements = WAIT.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "encounter-link")))
             
             success = True
         except TimeoutException:
@@ -1793,6 +1800,13 @@ def tableproc( table_code, # id of the table
         gamelogs_div = DRIVER.find_element(By.XPATH, "//div[@id='gamelogs']")
         logrow_divs = gamelogs_div.find_elements(By.XPATH, "./div")
         if len(logrow_divs) == 0 :
+            # if the players left the tournament there are no logrows 
+            rank_text = DRIVER.find_element(By.XPATH, "(//div[contains(@class,'rank')])[1]").text.strip().lower()
+            print("Rank text: " + rank_text)
+            if rank_text in ["nem rangsorolt", "not ranked"]:
+                print("The game was not played")
+                return
+            
             print("Cannot load gamereview data, probably reaching limit...")
             exit_program()
 
@@ -2037,8 +2051,8 @@ def tableproc( table_code, # id of the table
         
         if len(carcsteps) == 0 and move_number < 2 :
             print("Gamelog not available...")
-            exit_program()            
-            #return          
+            #exit_program()            
+            return          
            
         carcevent = CarcEvent.START
         carcstepObj = CarcStep(table_code=table_code, seq=1, turn=1, bgamove=1, turnplayer=start_player_pos, stepplayer=start_player_pos,
@@ -2315,6 +2329,8 @@ if argnum > 2 :
                 no_sandbox = True
             case "--profilepic":
                 update_profilepic = True
+            case "--nominfilter":
+                subfunc_set.add("nominfilter")
 
 try:
     DRIVER, WAIT = create_driver(headless=headless, no_sandbox=no_sandbox)                

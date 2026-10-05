@@ -32,7 +32,7 @@
       gamestats: https://www.boardgamearena.com/gamestats?player={p1}&game_id={p2}
       gamestatsfull: https://www.boardgamearena.com/gamestats?player={p1}&game_id={p2}&opponent_id={p3}&end_date={p4}&finished=0
       gamestatsfull2: https://www.boardgamearena.com/gamestats?player={p1}&game_id={p2}&opponent_id={p3}&start_date={p4}&end_date={p5}&finished=0
-      tournament: https://boardgamearena.com/tournament?id={p1}
+      tournament: https://boardgamearena.com/tournament?id={p1}#overview
       tournamentstage: https://boardgamearena.com/tournament?id={p1}#stage{p2}
       tournamentgroup: https://boardgamearena.com/tournament?id={p1}#group_{p2}
       table: https://boardgamearena.com/table?table={p1}&nr
