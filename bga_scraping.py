@@ -231,6 +231,24 @@ def login24():
     WAIT.until(EC.visibility_of_element_located((By.ID, "submit_login_button")))
     DRIVER.find_element(By.ID, "submit_login_button").click()
 
+def find_visible_email_input(driver):
+    elements = driver.find_elements(By.CSS_SELECTOR, "input[name='email']")
+
+    for element in elements:
+        if element.is_displayed() and element.is_enabled():
+            return element
+
+    return False
+
+def find_visible_password_input(driver):
+    elements = driver.find_elements(By.CSS_SELECTOR, "input[type='password']")
+
+    for element in elements:
+        if element.is_displayed() and element.is_enabled():
+            return element
+
+    return False
+
 def login():
     global loggedIn
     global lang
@@ -246,8 +264,7 @@ def login():
     username = BGA_LOGIN['user']
     pw = BGA_LOGIN['password']
 
-    WAIT.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[2]/div/div/input')))
-    it_username = DRIVER.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[1]/div/div[2]/form/div[2]/div/div/input')
+    it_username = WAIT.until(find_visible_email_input)
 
     it_username.send_keys(username)
     time.sleep(2)
@@ -263,8 +280,7 @@ def login():
         raise NoSuchElementException("No visible button found to submit username")
     time.sleep(1)
 
-    WAIT.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[2]/div/form/div[1]/div[2]/div/input')))
-    it_password = DRIVER.find_element(By.XPATH, '//*[@id="account-module"]/div[3]/div[3]/div/div[2]/div/div[2]/div[2]/div/form/div[1]/div[2]/div/input')
+    it_password = WAIT.until(find_visible_password_input)
     it_password.send_keys(pw)
     time.sleep(2)
 
@@ -313,6 +329,10 @@ def login_with_retry( max_attempts = 3 ):
         except Exception as e:
             last_exc = e
             print(f"Login FAILED: {repr(e)}")
+            DRIVER.save_screenshot(
+                "debug_login.png"
+                # f"/home/joti/scraping/debug_login_{attempt}.png"
+            )            
             restart_driver()
             time.sleep(5)
 
@@ -698,10 +718,15 @@ def elo_hist( game_def,     # id or name of the game,
             DRIVER.get(community_link)
             time.sleep(1)
 
-            WAIT.until(EC.visibility_of_element_located((By.ID, "findplayer")))
-            it_findplayer = DRIVER.find_element(By.ID, "findplayer")
+            WAIT.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".bgaPlayerSearch input")))
+            it_findplayer = DRIVER.find_element(By.CSS_SELECTOR, ".bgaPlayerSearch input")
             it_findplayer.send_keys(player_name)
-            it_findplayer.send_keys(Keys.ENTER)
+
+            player_xpath = f"//span[text()='{player_name}']/ancestor::div[@role='button'][1]"
+            player_result = WAIT.until( EC.element_to_be_clickable((By.XPATH, player_xpath)) )
+            player_result.click()
+
+            # it_findplayer.send_keys(Keys.ENTER)
 
             try:
                 WAIT.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="elo_game_' + game_id + '"]')))
